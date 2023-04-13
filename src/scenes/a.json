@@ -1,0 +1,119 @@
+{
+  "camera": {
+    "field":      60,
+    "background": [0, 0, 0.1]
+  },
+  
+  "objects": [
+    {
+      "type":        "cylinder",
+      "radius":      1.0,
+      "height":      1.0,
+      "transformations":
+        [
+          {
+            "type":"rotation",
+            "axis":[1,0,0],
+            "degrees": 10.0
+          },
+          {
+            "type":"rotation",
+            "axis":[0,0,1],
+            "degrees": 100.0
+          },
+          {
+            "type":"translate",
+            "translate":[1,-1,-5]
+          }
+        ],
+      "material": {
+        "ambient":   [0.1, 0.1, 0.1],
+        "diffuse":   [0.4, 0.2, 0],
+        "specular":  [1, 1, 1],
+        "shininess": 5.6
+      }
+    },
+    {
+      "type":        "cylinder",
+      "radius":      0.5,
+      "height":      1.5,
+      "transformations":
+        [
+          {
+            "type":"rotation",
+            "axis":[1,0,0],
+            "degrees": 60.0
+          },
+          {
+            "type":"rotation",
+            "axis":[0,1,0],
+            "degrees": 90.0
+          },
+          {
+            "type":"rotation",
+            "axis":[0,0,1],
+            "degrees": 50.0
+          },
+          {
+            "type":"translate",
+            "translate":[-0.5,0.5,-3]
+          }
+        ],
+      "material": {
+        "ambient":   [0.2, 0.2, 0.2],
+        "diffuse":   [0.2, 0.4, 0.4],
+        "specular":  [1, 1, 1],
+        "shininess": 10.6,
+        "reflective": [0.5,0.5,0.5],
+        "transmissive": [0.5,0.5,0.5]
+      }
+    },
+
+    {
+      "type":      "plane",
+      "position":  [0, -2, 0],
+      "normal":    [0, 1, 0],
+      "material": {
+        "ambient": [0.2, 0.2, 0.2],
+        "diffuse": [0.56, 0.24, 0.12]
+      }
+    },
+    {
+      "type":      "plane",
+      "position":  [-2.5, -1, 1.5],
+      "normal":    [1, 0, -0.3],
+      "material": {
+        "ambient": [0.5, 0.5, 0.7],
+        "diffuse": [0.72, 0.75, 0.84]
+      }
+    }
+  ],
+  
+  "lights": [
+    {
+      "type":     "ambient",
+      "color":    [0.7, 0.7, 0.7],
+      "_comment": "for ambient light, color is ia"
+    },
+    {
+      "type":      "directional",
+      "color":     [0.9, 0.9, 0.9],
+      "direction": [-0.1, -1, 0],
+      "_comment":  "for directional and point lights, color is both id and is"
+    },
+    {
+      "type":     "point",
+      "color":    [0.6, 0.6, 0.0],
+      "position": [0, 2, -4.3],
+      "_comment": "for directional and point lights, color is both id and is"
+    },
+    {
+      "type":      "spot",
+      "color":     [0.2, 0.32, 0.85],
+      "position":  [-2, 3.9, 1.5],
+      "direction": [0.4, -0.8, -1],
+      "cutoff":    10,
+      "_comment":  "cutoff is half angle of cone, in degrees"
+    }
+  ]
+}
