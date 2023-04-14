@@ -19,65 +19,65 @@ typedef glm::vec3 colour3;
 /// A tuple containing the following values from index 0 to 3: 
 /// float t value, 
 /// Object* intersecting object, 
-/// point3 intersection normal, 
-/// point3 intersection point.
+/// Vector intersection normal, 
+/// Vertex intersection point.
 /// </returns>
-std::tuple<float, Object*, point3, point3> rayIntersectScene(point3 e, point3 d, Scene scene, float minT);
+std::tuple<float, Object*, Vector, Vertex> rayIntersectScene(const Vertex& e, const Vector& d, const Scene& scene, float minT);
 
 namespace cylinderOps {
     struct CylinderIntersectResult
     {
-        point3 intersection;
-        point3 normal;
+        Vertex intersection;
+        Vector normal;
         float t;
 
         CylinderIntersectResult() : t(-1)
         {}
     };
 
-    bool rayIntersects(const point3& e, const point3& d, Cylinder* cylinder, CylinderIntersectResult& result, float minT);
+    bool rayIntersects(const Vertex& e, const Vector& d, Cylinder* cylinder, CylinderIntersectResult& result, float minT);
 }
 
 namespace sphereOps {
     struct SphereIntersectResult
     {
-        point3 intersection_near;
-        point3 normal_near;
+        Vertex intersection_near;
+        Vector normal_near;
         float t_near;
 
         SphereIntersectResult() : t_near(-1)
         {}
     };
 
-    bool rayIntersects(const point3& e, const point3& d, Sphere* sphere, SphereIntersectResult& result, float minT);
+    bool rayIntersects(const Vertex& e, const Vector& d, Sphere* sphere, SphereIntersectResult& result, float minT);
 }
 
 namespace planeOps {
     struct PlaneIntersectResult
     {
-        point3 intersection;
-        point3 normal;
+        Vertex intersection;
+        Vector normal;
         float t;
 
         PlaneIntersectResult() : t(-1)
         {}
     };
 
-    bool rayIntersects(const point3& e, const point3& d, Plane* plane, PlaneIntersectResult& result, float minT);
-    bool rayIntersects(const point3& e, const point3& d, point3 n, point3 a, PlaneIntersectResult& result, float minT);
+    bool rayIntersects(const Vertex& e, const Vector& d, Plane* plane, PlaneIntersectResult& result, float minT);
+    bool rayIntersects(const Vertex& e, const Vector& d, const Vector& n, const Vertex& a, PlaneIntersectResult& result, float minT);
 }
 
 
 namespace meshOps {
     struct MeshRayIntersectResult
     {
-        point3 intersection;
-        point3 normal;
+        Vertex intersection;
+        Vector normal;
         float t;
 
         MeshRayIntersectResult() : t(-1)
         {}
     };
 
-	bool rayIntersects(const point3& e, const point3& d, Mesh* mesh, MeshRayIntersectResult& result, float minT);
+	bool rayIntersects(const Vertex& e, const Vector& d, Mesh* mesh, MeshRayIntersectResult& result, float minT);
 }

@@ -6,6 +6,7 @@
 #include "raytracer.h"
 #include "geometryIntersect.h"
 #include "lightingOperations.h"
+#include "BVH/binaryTree.h"
 
 #include <iostream>
 #include <fstream>
@@ -49,7 +50,7 @@ glm::vec3 vector_to_vec3(const std::vector<float>& v) {
 
 void choose_scene(char const* fn) {
 	if (fn == NULL) {
-		fn = "c";
+		fn = "a";
 		std::cout << "Using default input file " << PATH << fn << ".json\n";
 	}
 
@@ -81,7 +82,7 @@ bool isTransmissive(Material material) {
 	return (material.transmissive.r > 0 || material.transmissive.g > 0 || material.transmissive.b > 0);
 }
 
-point3 recursiveRayTrace(const point3& e, const point3& d, bool& hit, bool pick, int depth) {
+colour3 recursiveRayTrace(const Vertex& e, const Vector& d, bool& hit, bool pick, int depth) {
 	if (depth > 8) {
 		return background_colour;
 	}
@@ -101,12 +102,12 @@ point3 recursiveRayTrace(const point3& e, const point3& d, bool& hit, bool pick,
 		hit = true;
 	}
 
-	point3 colour = point3(0, 0, 0);
+	colour3 colour = colour3(0, 0, 0);
 	float t = std::get<0>(result);
-	point3 normal = std::get<2>(result);
-	point3 intersection = std::get<3>(result);
+	Vector normal = std::get<2>(result);
+	Vertex intersection = std::get<3>(result);
 	Material& material = object->material;
-	point3 E = glm::normalize(e - intersection);
+	Vector E = glm::normalize(e - intersection);
 
 	if (pick) std::cout << "HIT: " << object->type << ", t=" << t << ", n=" << glm::to_string(normal) << std::endl;
 
@@ -114,40 +115,40 @@ point3 recursiveRayTrace(const point3& e, const point3& d, bool& hit, bool pick,
 		if (_light->type == "ambient") {
 			AmbientLight* light = (AmbientLight*)(_light);
 
-			colour += calculateAmbient(light, colour, &material, intersection, normal, E);
+			colour += lightingOps::calculateAmbient(light, colour, &material, intersection, normal, E);
 		}
 		else if (_light->type == "directional") {
 			DirectionalLight* light = (DirectionalLight*)(_light);
 
-			float shadowIntensity = calcDirectionalLightShadowIntensity(intersection, normal, light, scene);
+			float shadowIntensity = lightingOps::calcDirectionalLightShadowIntensity(intersection, normal, light, scene);
 
-			colour += shadowIntensity * (calculateDirectionalPhong(light, colour, &material, intersection, normal, E));
+			colour += shadowIntensity * (lightingOps::calculateDirectionalPhong(light, colour, &material, intersection, normal, E));
 		}
 		else if (_light->type == "point") {
 			PointLight* light = (PointLight*)(_light);
 
-			float distanceIntensity = calcDistanceIntensity(glm::length(light->position - intersection));
-			float shadowIntensity = calcPointLightShadowIntensity(intersection, light, scene);
+			float distanceIntensity = lightingOps::calcDistanceIntensity(glm::length(light->position - intersection));
+			float shadowIntensity = lightingOps::calcPointLightShadowIntensity(intersection, light, scene);
 
-			colour += shadowIntensity * distanceIntensity * (calculatePointPhong(light, colour, &material, intersection, normal, E));
+			colour += shadowIntensity * distanceIntensity * (lightingOps::calculatePointPhong(light, colour, &material, intersection, normal, E));
 		}
 		else if (_light->type == "spot") {
 			SpotLight* light = (SpotLight*)(_light);
 
-			float distanceIntensity = calcDistanceIntensity(glm::length(light->position - intersection));
-			float shadowIntensity = calcSpotLightShadowIntensity(intersection, light, scene);
+			float distanceIntensity = lightingOps::calcDistanceIntensity(glm::length(light->position - intersection));
+			float shadowIntensity = lightingOps::calcSpotLightShadowIntensity(intersection, light, scene);
 
-			colour += distanceIntensity * shadowIntensity * (calculateSpotPhong(light, colour, &material, intersection, normal, E));
+			colour += distanceIntensity * shadowIntensity * (lightingOps::calculateSpotPhong(light, colour, &material, intersection, normal, E));
 		}
 	}
 
 	if (isReflective(material)) {
-		point3 reflectedRay = 2 * glm::dot(normal, E) * normal - E;
+		Vector reflectedRay = 2 * glm::dot(normal, E) * normal - E;
 		colour += (recursiveRayTrace(intersection, reflectedRay, hit, pick, depth + 1) * material.reflective);
 	}
 
 	if (isTransmissive(material)) {
-		point3 reflectedRay = material.refraction > 0 ? calcRefraction(d, normal, material.refraction, reflectedRay) : d;
+		Vector reflectedRay = material.refraction > 0 ? lightingOps::calcRefraction(d, normal, material.refraction, reflectedRay) : d;
 		colour = (colour * (1.0f - material.transmissive)) + recursiveRayTrace(intersection, reflectedRay, hit, pick, depth + 1) * material.transmissive;
 	}
 
@@ -155,8 +156,8 @@ point3 recursiveRayTrace(const point3& e, const point3& d, bool& hit, bool pick,
 	return colour;
 }
 
-bool trace(const point3& e, const point3& s, colour3& colour, bool pick) {
-	point3 d = s - e;
+bool trace(const Vertex& e, const Vertex& s, colour3& colour, bool pick) {
+	Vector d = s - e;
 	bool hit = false;
 	colour = recursiveRayTrace(e, d, hit, pick, 0);
 	return hit;

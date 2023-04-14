@@ -6,14 +6,16 @@
 typedef glm::vec3 point3;
 typedef glm::vec3 colour3;
 
-float calcDistanceIntensity(float dist);
-float calcDirectionalLightShadowIntensity(point3 intersection, point3 normal, DirectionalLight* light, Scene scene, int rayCount=1);
-float calcPointLightShadowIntensity(point3 intersection, PointLight* light, Scene scene, int rayCount = 1);
-float calcSpotLightShadowIntensity(point3 intersection, SpotLight* light, Scene scene, int rayCount = 1);
+namespace lightingOps {
+	float calcDistanceIntensity(float dist);
+	float calcDirectionalLightShadowIntensity (const Vertex& intersection, const Vector& normal, DirectionalLight* light, const Scene& scene, int rayCount = 1);
+	float calcPointLightShadowIntensity (const Vertex& intersection, PointLight* light, const Scene& scene, int rayCount = 1);
+	float calcSpotLightShadowIntensity (const Vertex& intersection, SpotLight* light, const Scene& scene, int rayCount = 1);
 
-point3 calculateAmbient(AmbientLight* light, point3 color, Material* material, point3 intersection, point3 normal, point3 E);
-point3 calculateDirectionalPhong(DirectionalLight* light, point3 color, Material* material, point3 intersection, point3 normal, point3 E);
-point3 calculatePointPhong(PointLight* light, point3 color, Material* material, point3 intersection, point3 normal, point3 E);
-point3 calculateSpotPhong(SpotLight* light, point3 color, Material* material, point3 intersection, point3 normal, point3 E);
+	colour3 calculateAmbient(AmbientLight* light, const colour3& color, Material* material, const Vertex& intersection, const Vertex& normal, const Vertex& E);
+	colour3 calculateDirectionalPhong(DirectionalLight* light, const colour3& color, Material* material, const Vertex& intersection, const Vertex& normal, const Vertex& E);
+	colour3 calculatePointPhong(PointLight* light, const colour3& color, Material* material, const Vertex& intersection, const Vertex& normal, const Vertex& E);
+	colour3 calculateSpotPhong(SpotLight* light, const colour3& color, Material* material, const Vertex& intersection, const Vertex& normal, const Vertex& E);
 
-point3 calcRefraction(const point3 inc_vec, point3 normal, float refraction_index, point3& refracted_vec);
+	colour3 calcRefraction(const Vector& inc_vec, const Vector& normal, float refraction_index, Vector& refracted_vec);
+}
