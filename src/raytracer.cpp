@@ -4,9 +4,12 @@
 // The JSON library allows you to reference JSON arrays like C++ vectors and JSON objects like C++ maps.
 
 #include "raytracer.h"
+
+#include "BVH/BVH.h"
+#include "BVH/BVHBinaryTree.h"
+
 #include "geometryIntersect.h"
 #include "lightingOperations.h"
-#include "BVH/binaryTree.h"
 
 #include <iostream>
 #include <fstream>
@@ -25,6 +28,7 @@ colour3 background_colour(0, 0, 0);
 
 json jscene;
 Scene scene;
+BVH* bvh;
 
 /****************************************************************************/
 
@@ -50,7 +54,7 @@ glm::vec3 vector_to_vec3(const std::vector<float>& v) {
 
 void choose_scene(char const* fn) {
 	if (fn == NULL) {
-		fn = "a";
+		fn = "d";
 		std::cout << "Using default input file " << PATH << fn << ".json\n";
 	}
 
@@ -72,6 +76,7 @@ void choose_scene(char const* fn) {
 
 	fov = scene.camera.field;
 	background_colour = scene.camera.background;
+	bvh = new BVH(scene);
 }
 
 bool isReflective(Material material) {
@@ -90,7 +95,8 @@ colour3 recursiveRayTrace(const Vertex& e, const Vector& d, bool& hit, bool pick
 	float minT = depth == 0 ? 1 : 0.001;
 	hit = depth == 0 ? false : depth;
 
-	auto result = rayIntersectScene(e, d, scene, minT);
+	auto result = bvh->intersectBVH(e, d, minT);//
+	//auto result = rayIntersectObjects(e, d, scene.objects, minT);
 
 	Object* object = std::get<1>(result);
 
@@ -120,7 +126,7 @@ colour3 recursiveRayTrace(const Vertex& e, const Vector& d, bool& hit, bool pick
 		else if (_light->type == "directional") {
 			DirectionalLight* light = (DirectionalLight*)(_light);
 
-			float shadowIntensity = lightingOps::calcDirectionalLightShadowIntensity(intersection, normal, light, scene);
+			float shadowIntensity = lightingOps::calcDirectionalLightShadowIntensity(intersection, normal, light, bvh);
 
 			colour += shadowIntensity * (lightingOps::calculateDirectionalPhong(light, colour, &material, intersection, normal, E));
 		}
@@ -128,7 +134,7 @@ colour3 recursiveRayTrace(const Vertex& e, const Vector& d, bool& hit, bool pick
 			PointLight* light = (PointLight*)(_light);
 
 			float distanceIntensity = lightingOps::calcDistanceIntensity(glm::length(light->position - intersection));
-			float shadowIntensity = lightingOps::calcPointLightShadowIntensity(intersection, light, scene);
+			float shadowIntensity = lightingOps::calcPointLightShadowIntensity(intersection, light, bvh);
 
 			colour += shadowIntensity * distanceIntensity * (lightingOps::calculatePointPhong(light, colour, &material, intersection, normal, E));
 		}
@@ -136,7 +142,7 @@ colour3 recursiveRayTrace(const Vertex& e, const Vector& d, bool& hit, bool pick
 			SpotLight* light = (SpotLight*)(_light);
 
 			float distanceIntensity = lightingOps::calcDistanceIntensity(glm::length(light->position - intersection));
-			float shadowIntensity = lightingOps::calcSpotLightShadowIntensity(intersection, light, scene);
+			float shadowIntensity = lightingOps::calcSpotLightShadowIntensity(intersection, light, bvh);
 
 			colour += distanceIntensity * shadowIntensity * (lightingOps::calculateSpotPhong(light, colour, &material, intersection, normal, E));
 		}
@@ -159,6 +165,11 @@ colour3 recursiveRayTrace(const Vertex& e, const Vector& d, bool& hit, bool pick
 bool trace(const Vertex& e, const Vertex& s, colour3& colour, bool pick) {
 	Vector d = s - e;
 	bool hit = false;
+
+	if (pick) {
+		//bvh->intersectBVH(e, d, 0.001);
+	}
+
 	colour = recursiveRayTrace(e, d, hit, pick, 0);
 	return hit;
 }

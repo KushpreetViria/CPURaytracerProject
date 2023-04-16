@@ -1,16 +1,20 @@
 #pragma once
 
 #include "../schema.h"
-#include "BVHBinaryTree.h"
 #include "BVHBoundingBox.h"
+#include "BVHBinaryTree.h"
 
 class BVH {
 public:
-	BVH (Scene* scene);
+	BVHBinaryTree tree = BVHBinaryTree();
+	BVH() {};
+	BVH (Scene& scene);
+	std::tuple<float, Object*, Vector, Vertex> intersectBVH(const Vertex& e, const Vector& d, float minT);
 	~BVH ();
 private:
 	Vertex axes[3] = { Vector(1.0f, 0, 0), Vector(0, 1.0f, 0), Vector(0, 0, 1.0f) };
-	BVHBinaryTree<BVHBoundingBox> tree;
+	std::vector<Object*> planes;
 
-	inline void sortObjectsAlongAxis(std::vector<BVHBoundingBox*> objectBoxes, Vector axis);
+	void constructBVHTree(std::vector<Object*> objects, BVHBinaryTree::Node* parent, int currAxis);
+	std::vector<Object*> BVH::sortObjectsAlongAxis(std::vector<Object*> objects, Vector axis);
 };

@@ -108,7 +108,6 @@
     <None Include="..\src\v.glsl" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\src\BVH\BVHBinaryTreee.cpp" />
     <ClCompile Include="..\src\BVH\BVHBoundingBox.cpp" />
     <ClCompile Include="..\src\BVH\BVH.cpp" />
     <ClCompile Include="..\src\json2scene.cpp" />

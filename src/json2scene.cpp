@@ -62,35 +62,81 @@ int json_to_scene(json& jscene, Scene& s) {
 		// Every object in the scene will have a type
 		if (object["type"] == "sphere") {
 			// Every sphere has a position and a radius
-			Vertex pos = vector_to_vec3(object["position"]);
+			//Vertex pos = vector_to_vec3(object["position"]);
 			float radius = object["radius"];
-			s.objects.push_back(new Sphere(m, radius, pos));
+
+			std::vector<glm::mat4> transformations;
+			getTransformations(object, transformations);
+			glm::mat4 matMultTrans(1);
+			for (auto t = std::crbegin(transformations); t != std::crend(transformations); t++) {
+				matMultTrans *= (*t);
+			}
+
+			Sphere* sphere = new Sphere(m, radius, transformations);
+			sphere->transformPos = matMultTrans * glm::vec4(0, 0, 0, 1);
+
+			s.objects.push_back(sphere);
 		}
-		else if (object["type"] == "cylinder") {
+
+		else if (object["type"] == "cylinder") 
+		{
 			float radius = object["radius"];
 			float height = object["height"];
 
 			std::vector<glm::mat4> transformations;
 			getTransformations(object, transformations);
 
-			s.objects.push_back(new Cylinder(m, radius, height, transformations));
+			glm::mat4 matMultTrans(1);
+			for (auto t = std::crbegin(transformations); t != std::crend(transformations); t++) {
+				matMultTrans *= (*t);
+			}
+
+			Cylinder* cylinder = new Cylinder(m, radius, height, transformations);
+			cylinder->transformPos = matMultTrans * glm::vec4(0, 0, 0,1);
+
+			s.objects.push_back(cylinder);
 		}
-		else if (object["type"] == "plane") {
+
+		else if (object["type"] == "plane") 
+		
+		{
 			// Every plane has a position (point of intersection) and a normal
 			Vertex pos = vector_to_vec3(object["position"]);
 			Vector normal = vector_to_vec3(object["normal"]);
 			s.objects.push_back(new Plane(m, pos, normal));
 		}
-		else if (object["type"] == "mesh") {
+
+		else if (object["type"] == "mesh") 
+		{
 			// Every mesh has a list of triangles
 			std::vector<Triangle> tris;
 			json& ts = object["triangles"];
+
+			std::vector<glm::mat4> transformations;
+			getTransformations(object, transformations);
+			glm::mat4 matMultTrans(1);
+			for (auto t = std::crbegin(transformations); t != std::crend(transformations); t++) {
+				matMultTrans *= (*t);
+			}
+
+			Vertex center = Vertex(0, 0, 0);
 			for (json::iterator ti = ts.begin(); ti != ts.end(); ++ti) {
 				json& t = *ti;
-				tris.push_back({ vector_to_vec3(t[0]), vector_to_vec3(t[1]), vector_to_vec3(t[2]) });
+				Vertex v1 = vector_to_vec3(t[0]);
+				Vertex v2 = vector_to_vec3(t[1]);
+				Vertex v3 = vector_to_vec3(t[2]);
+				tris.push_back({ v1, v2, v3 });
+
+				center += (v1 + v2 + v3) / 3.0f;
 			}
-			s.objects.push_back(new Mesh(m, tris));
+
+			center /= (float)ts.size();
+			Mesh* mesh = new Mesh(m, tris, transformations);
+			mesh->transformPos = matMultTrans * glm::vec4(center,1.0f);
+
+			s.objects.push_back(mesh);
 		}
+
 		else {
 			std::cout << "*** unrecognized object type " << object["type"] << "\n";
 			return -1;
@@ -143,6 +189,9 @@ int json_to_scene(json& jscene, Scene& s) {
 
 void getTransformations(json object, std::vector<glm::mat4>& transformations) {
 	json& ts = object["transformations"];
+
+	if (ts.is_null()) return;
+
 	for (json::iterator ti = ts.begin(); ti != ts.end(); ++ti) {
 		json& t = *ti;
 		if (t["type"] == "rotation") {

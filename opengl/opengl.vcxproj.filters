@@ -85,9 +85,6 @@
     <ClCompile Include="..\src\raytracer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\BVH\BVHBinaryTreee.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\BVH\BVHBoundingBox.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>

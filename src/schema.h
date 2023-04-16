@@ -48,6 +48,7 @@ struct Material {
 struct Object {
   std::string type;
   Material material;
+  Vertex transformPos;
   
   Object(std::string _type, Material _material) :
     type(_type), material(_material) {}
@@ -64,10 +65,10 @@ struct Cylinder : public Object {
 
 struct Sphere : public Object {
   float radius;
-  Vertex position;
+  std::vector<glm::mat4> transformations;
 
-  Sphere(Material _material, float _radius, Vertex _position) :
-    Object("sphere", _material), radius(_radius), position(_position) {}
+  Sphere(Material _material, float _radius, std::vector<glm::mat4> _transformations) :
+    Object("sphere", _material), radius(_radius), transformations(_transformations) {}
 };
 
 struct Plane : public Object {
@@ -84,9 +85,10 @@ struct Triangle {
 
 struct Mesh : public Object {
   std::vector<Triangle> triangles;
+  std::vector<glm::mat4> transformations;
 
-  Mesh(Material _material, std::vector<Triangle> _triangles) :
-    Object("mesh", _material), triangles(_triangles) {}
+  Mesh(Material _material, std::vector<Triangle> _triangles, std::vector<glm::mat4> _transformations) :
+    Object("mesh", _material), triangles(_triangles), transformations(_transformations) {}
 };
 
 struct Light {

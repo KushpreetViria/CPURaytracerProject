@@ -3,17 +3,15 @@
 #include <glm/glm.hpp>
 #include <glm/gtx/quaternion.hpp>
 #include <glm/gtx/transform.hpp>
-//#include <glm/gtx/norm.hpp>
-//#include <glm/vector_relational.hpp>
-//#include <glm/gtx/vector_angle.hpp>
+#include <glm/gtx/string_cast.hpp>
 
-std::tuple<float, Object*, Vector, Vertex> rayIntersectScene(const Vertex& e, const Vector& d, const Scene& scene, float minT) {
+std::tuple<float, Object*, Vector, Vertex> rayIntersectObjects(const Vertex& e, const Vector& d, std::vector<Object*> objects, float minT) {
 	float best_t = std::numeric_limits<float>::infinity();
 	Object* bestObj = NULL;
 	Vector bestNormal;
 	Vertex bestIntersectionPoint;
 
-	for (auto&& object : scene.objects) {
+	for (auto&& object : objects) {
 		if (object->type == "sphere") {
 			Sphere* sphere = (Sphere*)(object);
 			sphereOps::SphereIntersectResult result;
@@ -72,20 +70,30 @@ std::tuple<float, Object*, Vector, Vertex> rayIntersectScene(const Vertex& e, co
 // ***************************************************************************************************************** //
 
 bool sphereOps::rayIntersects(const Vertex& e, const Vector& d, Sphere* sphere, sphereOps::SphereIntersectResult& result, float minT) {
-	Vertex c = sphere->position;
+	glm::mat4 sphereTransform(1);
+	for (auto t = std::crbegin(sphere->transformations); t != std::crend(sphere->transformations); t++) {
+		sphereTransform *= (*t);
+	}
+	glm::mat4 transformInverse = glm::inverse(sphereTransform);
+	Vertex transformedRayOrigin = transformInverse * glm::vec4(e, 1.0f);
+	Vector transformedRayDir = transformInverse * glm::vec4(d, 0.0f);
+
+	Vertex c = Vertex(0,0,0);
 	float r = sphere->radius;
 
-	Vector ec = e - c;
-	float dd = glm::dot(d, d);
+	Vector ec = transformedRayOrigin - c;
+	float dd = glm::dot(transformedRayDir, transformedRayDir);
 
-	float discriminant = glm::sqrt(glm::pow((glm::dot(d, ec)), 2) - dd * (glm::dot(ec, ec) - glm::pow(r, 2)));
+	float discriminant = glm::pow((glm::dot(transformedRayDir, ec)), 2) - dd * (glm::dot(ec, ec) - glm::pow(r, 2));
 
 	if (discriminant < 0) {
 		return false;
 	}
 	else {
-		float t0 = (glm::dot(-d, ec) + discriminant) / dd;
-		float t1 = (glm::dot(-d, ec) - discriminant) / dd;
+		float sqrt = glm::sqrt(discriminant);
+
+		float t0 = (glm::dot(-transformedRayDir, ec) + sqrt) / dd;
+		float t1 = (glm::dot(-transformedRayDir, ec) - sqrt) / dd;
 
 		if (t0 <= minT && t1 <= minT) {
 			return false;
@@ -96,10 +104,12 @@ bool sphereOps::rayIntersects(const Vertex& e, const Vector& d, Sphere* sphere, 
 			else if (t0 > minT) result.t_near = t0;
 			else result.t_near = t1;
 
-			result.intersection_near = e + result.t_near * d;
+			Vertex intersectionModelSpace = transformedRayOrigin + transformedRayDir * result.t_near;
+			Vector normalModelSpace = glm::normalize(sphereTransform * glm::vec4(intersectionModelSpace, 0));
+			Vertex intersectionWorldSpace = sphereTransform * glm::vec4(intersectionModelSpace,1);
 
-			result.normal_near = glm::normalize(result.intersection_near - c);
-
+			result.intersection_near = intersectionWorldSpace;
+			result.normal_near = normalModelSpace;
 			return true;
 		}
 	}
@@ -112,18 +122,13 @@ bool sphereOps::rayIntersects(const Vertex& e, const Vector& d, Sphere* sphere, 
 
 bool planeOps::rayIntersects(const Vertex& e, const Vector& d, Plane* plane, planeOps::PlaneIntersectResult& result, float minT)
 {
-	Vector n = plane->normal;
-	Vertex a = plane->position;
-
-	float denom = glm::dot(n, d);
-
+	float denom = glm::dot(plane->normal, d);
 	if (denom == 0) return false;
-
-	float t = glm::dot(n, a - e) / denom;
+	float t = glm::dot(plane->normal, plane->position - e) / denom;
 
 	if (t > minT) {
 		result.intersection = e + t * d;
-		result.normal = n;
+		result.normal = plane->normal;
 		result.t = t;
 		return true;
 	}
@@ -135,9 +140,7 @@ bool planeOps::rayIntersects(const Vertex& e, const Vector& d, Plane* plane, pla
 bool planeOps::rayIntersects(const Vertex& e, const Vector& d, const Vector& n, const Vertex& a, planeOps::PlaneIntersectResult& result, float minT)
 {
 	float denom = glm::dot(n, d);
-
 	if (denom == 0) return false;
-
 	float t = glm::dot(n, a - e) / denom;
 
 	if (t > minT) {
@@ -157,6 +160,14 @@ bool planeOps::rayIntersects(const Vertex& e, const Vector& d, const Vector& n, 
 
 bool meshOps::rayIntersects(const Vertex& e, const Vector& d, Mesh* mesh, meshOps::MeshRayIntersectResult& result, float minT)
 {
+	glm::mat4 meshTransform(1);
+	for (auto t = std::crbegin(mesh->transformations); t != std::crend(mesh->transformations); t++) {
+		meshTransform *= (*t);
+	}
+	glm::mat4 transformInverse = glm::inverse(meshTransform);
+	Vertex transformedRayOrigin = transformInverse * glm::vec4(e, 1.0f);
+	Vector transformedRayDir = transformInverse * glm::vec4(d, 0.0f);
+
 	bool intersects = false;
 	float bestMeshTriangleT = std::numeric_limits<float>::infinity();
 	Vector bestMeshTriangleN;
@@ -164,14 +175,14 @@ bool meshOps::rayIntersects(const Vertex& e, const Vector& d, Mesh* mesh, meshOp
 
 	for (auto&& triangle : mesh->triangles)
 	{
-		Vertex& a = triangle.vertices[0];
-		Vertex& b = triangle.vertices[1];
-		Vertex& c = triangle.vertices[2];
+		Vertex a = triangle.vertices[0];
+		Vertex b = triangle.vertices[1];
+		Vertex c = triangle.vertices[2];
 
 		auto normal = -glm::normalize(glm::cross((c - b), (b - a)));
 
 		planeOps::PlaneIntersectResult planeResult;
-		if (!planeOps::rayIntersects(e, d, normal, a, planeResult, minT)) {
+		if (!planeOps::rayIntersects(transformedRayOrigin, transformedRayDir, normal, a, planeResult, minT)) {
 			continue;
 		}
 		float t = planeResult.t;
@@ -198,8 +209,8 @@ bool meshOps::rayIntersects(const Vertex& e, const Vector& d, Mesh* mesh, meshOp
 		}
 	}
 
-	result.normal = bestMeshTriangleN;
-	result.intersection = bestMeshTriangleIntersection;
+	result.normal = meshTransform * glm::vec4(bestMeshTriangleN,0);
+	result.intersection = meshTransform * glm::vec4(bestMeshTriangleIntersection,1);
 	result.t = bestMeshTriangleT;
 
 	return intersects;
@@ -207,6 +218,7 @@ bool meshOps::rayIntersects(const Vertex& e, const Vector& d, Mesh* mesh, meshOp
 
 // ***************************************************************************************************************** //
 // Cylinder operations
+// https://www.realtimerendering.com/intersections.html
 // ***************************************************************************************************************** //
 
 bool cylinderOps::rayIntersects(const Vertex& e, const Vector& d, Cylinder* cylinder, CylinderIntersectResult& result, float minT) {
@@ -215,8 +227,9 @@ bool cylinderOps::rayIntersects(const Vertex& e, const Vector& d, Cylinder* cyli
 	for (auto t = std::crbegin(cylinder->transformations); t != std::crend(cylinder->transformations); t++) {
 		cylinderTransform *= (*t);
 	}
-	Vertex transformedRayOrigin = glm::inverse(cylinderTransform)* glm::vec4(e, 1.0f);
-	Vector transformedRayDir = glm::inverse(cylinderTransform)* glm::vec4(d, 0.0f);
+	glm::mat4 transformInverse = glm::inverse(cylinderTransform);
+	Vertex transformedRayOrigin = transformInverse * glm::vec4(e, 1.0f);
+	Vector transformedRayDir = transformInverse  * glm::vec4(d, 0.0f);
 
 	// Calculate the quadratic coefficients for the intersection equation
 	float a = transformedRayDir.x * transformedRayDir.x + transformedRayDir.z * transformedRayDir.z;
@@ -241,31 +254,6 @@ bool cylinderOps::rayIntersects(const Vertex& e, const Vector& d, Cylinder* cyli
 		t2 = maxT;
 	}
 
-	// Check if the intersection points are within the height of the cylinder
-	float minY = -cylinder->height / 2.0f; float maxY = cylinder->height / 2.0f;
-	Vertex p1 = transformedRayOrigin + t1 * transformedRayDir;
-
-	if (p1.y < minY || p1.y > maxY)
-	{
-		// The first body intersection point is outside the height of the cylinder, Check the second intersection point
-		Vertex p2 = transformedRayOrigin + t2 * transformedRayDir;
-		if (p2.y < minY || p2.y > maxY)
-		{
-			// Both body intersection points are outside the height of the cylinder
-			return false;
-		}
-		else {
-			result.t = t2;
-			result.intersection = p2;
-			result.normal = glm::normalize(cylinderTransform * glm::vec4(p2.x, 0.0f, p2.z, 0.0f));
-		}
-	}
-	else {
-		result.t = t1;
-		result.intersection = p1;
-		result.normal = glm::normalize(cylinderTransform * glm::vec4(p1.x, 0.0f, p1.z, 0.0f));
-	}
-
 	// Check for intersection with the top and bottom caps of the cylinder
 	bool intersectsTopCap = false;
 	bool intersectsBottomCap = false;
@@ -283,8 +271,8 @@ bool cylinderOps::rayIntersects(const Vertex& e, const Vector& d, Cylinder* cyli
 		{
 			// The intersection point with the top cap is within the radius of the cylinder
 			result.t = planeResultTop.t;
-			result.intersection = planeResultTop.intersection;
-			result.normal = glm::normalize(cylinderTransform * glm::vec4(topCapNormal,0.0f));  //glm::normalize(cylinderTransform * glm::vec4(topCapNormal,0.0f));
+			result.intersection = cylinderTransform * glm::vec4(planeResultTop.intersection, 1);
+			result.normal = glm::normalize(cylinderTransform * glm::vec4(topCapNormal, 0.0f));  //glm::normalize(cylinderTransform * glm::vec4(topCapNormal,0.0f));
 			return true;
 		}
 	}
@@ -294,11 +282,77 @@ bool cylinderOps::rayIntersects(const Vertex& e, const Vector& d, Cylinder* cyli
 		{
 			// The intersection point with the bottom cap is within the radius of the cylinder
 			result.t = planeResultBot.t;
-			result.intersection = planeResultBot.intersection;
+			result.intersection = cylinderTransform * glm::vec4(planeResultBot.intersection, 1);
 			result.normal = glm::normalize(cylinderTransform * glm::vec4(bottomCapNormal, 0.0f));
 			return true;
 		}
 	}
+
+	// Check if the intersection points are within the height of the cylinder
+	float minY = -cylinder->height / 2.0f; float maxY = cylinder->height / 2.0f;
+	Vertex p1 = transformedRayOrigin + t1 * transformedRayDir;
+
+	if (p1.y < minY || p1.y > maxY)
+	{
+		// The first body intersection point is outside the height of the cylinder, Check the second intersection point
+		Vertex p2 = transformedRayOrigin + t2 * transformedRayDir;
+		if (p2.y < minY || p2.y > maxY)
+		{
+			// Both body intersection points are outside the height of the cylinder
+			return false;
+		}
+		else {
+			result.t = t2;
+			result.intersection = cylinderTransform * glm::vec4(p2,1);
+			result.normal = glm::normalize(cylinderTransform * glm::vec4(p2.x, 0.0f, p2.z, 0.0f));
+			return true;
+		}
+	}
+	else {
+		result.t = t1;
+		result.intersection = cylinderTransform * glm::vec4(p1,1);
+		result.normal = glm::normalize(cylinderTransform * glm::vec4(p1.x, 0.0f, p1.z, 0.0f));
+		return true;
+	}
+
+	return false;
+}
+
+bool AABBOps::rayIntersects(const Vertex& e, const Vector& d, BVHBoundingBox* bbox, AABBIntersectResult& result, float minT)
+{
+	Vector invRayDir = 1.0f / d;
+
+	// Compute t-values for intersection with each face of AABB
+	Vertex aabbMin = Vertex(bbox->get_x_min(), bbox->get_y_min(), bbox->get_z_min());
+	Vertex aabbMax = Vertex(bbox->get_x_max(), bbox->get_y_max(), bbox->get_z_max());
+	glm::vec3 tMin = (aabbMin - e) * invRayDir;
+	glm::vec3 tMax = (aabbMax - e) * invRayDir;
+
+	// Sort t-values to find smallest and largest values
+	glm::vec3 t1 = glm::min(tMin, tMax);
+	glm::vec3 t2 = glm::max(tMin, tMax);
+
+	// Find the maximum of the minimum t-values
+	float tNear = glm::max(glm::max(t1.x, t1.y), t1.z);
+
+	// Find the minimum of the maximum t-values
+	float tFar = glm::min(glm::min(t2.x, t2.y), t2.z);
+
+	if (tFar < tNear || (tNear < minT && tFar < minT))
+	{
+		return false;
+	}
+
+	// If the near value is negative, the ray starts inside the AABB
+	if (tNear < minT)
+	{
+		result.t = tFar;
+	}
+	else {
+		result.t = tNear;
+	}
+
+	result.intersection = e + result.t * d;
 
 	return true;
 }

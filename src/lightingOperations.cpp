@@ -23,11 +23,12 @@ float lightingOps::calcDistanceIntensity(float dist)
 	return (1.0f / 1.0 + 0.001 * dist + 0.00001 * dist * dist);
 }
 
-float lightingOps::calcDirectionalLightShadowIntensity(const Vertex& intersection, const Vector& normal, DirectionalLight* light, const Scene& scene, int rayCount)
+float lightingOps::calcDirectionalLightShadowIntensity(const Vertex& intersection, const Vector& normal, DirectionalLight* light, BVH* bvh, int rayCount)
 {
 	if (rayCount <= 0) return 1.0f;
 	if (rayCount == 1) {
-		auto result = rayIntersectScene(intersection, -light->direction, scene, 0.001);
+		//auto result = rayIntersectObjects(intersection, -light->direction, scene.objects, 0.001);
+		auto result = bvh->intersectBVH(intersection, -light->direction, 0.001);
 		return (std::get<0>(result) >= 0.001f && ((std::get<1>(result) != NULL && std::get<1>(result)->type == "plane") || std::get<1>(result) == NULL))
 			? 1.0f : 0.0f;		
 	}
@@ -35,7 +36,8 @@ float lightingOps::calcDirectionalLightShadowIntensity(const Vertex& intersectio
 	int uninterceptedRays = 0;
 	for (int i = 0; i < rayCount; i++) {
 		Vector randomLightDir = randomVectorBy(Vector(-light->direction),-0.05f,0.05f);
-		auto result = rayIntersectScene(intersection, randomLightDir, scene, 0.001);
+		//auto result = rayIntersectObjects(intersection, randomLightDir, scene.objects, 0.001);
+		auto result = bvh->intersectBVH(intersection, randomLightDir, 0.001);
 		if (std::get<0>(result) >= -0.001f && ((std::get<1>(result) != NULL && std::get<1>(result)->type == "plane")
 			|| std::get<1>(result) == NULL))
 			uninterceptedRays++;
@@ -43,12 +45,13 @@ float lightingOps::calcDirectionalLightShadowIntensity(const Vertex& intersectio
 	return (float)uninterceptedRays / (float)rayCount;
 }
 
-float lightingOps::calcPointLightShadowIntensity(const Vertex& intersection, PointLight* light, const Scene& scene, int rayCount)
+float lightingOps::calcPointLightShadowIntensity(const Vertex& intersection, PointLight* light, BVH* bvh, int rayCount)
 {
 	if (rayCount <= 0) return 1.0f;
 	if (rayCount == 1) {
 		Vector d = light->position - intersection;
-		auto result = rayIntersectScene(intersection, d, scene, 0.001);
+		//auto result = rayIntersectObjects(intersection, d, scene.objects, 0.001);
+		auto result = bvh->intersectBVH(intersection, d, 0.001);
 		return (std::get<0>(result) > 1.0f || std::get<0>(result) < -0.001f)
 			? 1.0f : 0.0f;
 	}
@@ -57,19 +60,21 @@ float lightingOps::calcPointLightShadowIntensity(const Vertex& intersection, Poi
 	for (int i = 0; i < rayCount; i++) {
 		Vertex randomLightPoint = randomVectorBy(Vector(light->position), -0.2f, 0.2f);
 		Vector d = randomLightPoint - intersection;
-		auto result = rayIntersectScene(intersection, d, scene, 0.001);
+		//auto result = rayIntersectObjects(intersection, d, scene.objects, 0.001);
+		auto result = bvh->intersectBVH(intersection, d, 0.001);
 		if (std::get<0>(result) > 1.0f || std::get<0>(result) < -0.001f)
 			uninterceptedRays++;
 	}
 	return (float)uninterceptedRays / (float)rayCount;
 }
 
-float lightingOps::calcSpotLightShadowIntensity(const Vertex& intersection, SpotLight* light, const Scene& scene, int rayCount)
+float lightingOps::calcSpotLightShadowIntensity(const Vertex& intersection, SpotLight* light, BVH* bvh, int rayCount)
 {
 	if (rayCount <= 0) return 1.0f;
 	if (rayCount == 1) {
 		Vector d = light->position - intersection;
-		auto result = rayIntersectScene(intersection, d, scene, 0.001);
+		//auto result = rayIntersectObjects(intersection, d, scene.objects, 0.001);
+		auto result = bvh->intersectBVH(intersection, d, 0.001);
 		return (std::get<0>(result) > 1.0f || std::get<0>(result) < -0.001f)
 			? 1.0f : 0.0f;
 	}
@@ -78,7 +83,8 @@ float lightingOps::calcSpotLightShadowIntensity(const Vertex& intersection, Spot
 	for (int i = 0; i < rayCount; i++) {
 		Vertex randomLightPoint = randomVectorBy(Vector(light->position), -0.1f, 0.1f);
 		Vector d = randomLightPoint - intersection;
-		auto result = rayIntersectScene(intersection, d, scene, 0.001);
+		//auto result = rayIntersectObjects(intersection, d, scene.objects, 0.001);
+		auto result = bvh->intersectBVH(intersection, d, 0.001);
 		if (std::get<0>(result) > 1.0f || std::get<0>(result) < -0.001f)
 			uninterceptedRays++;
 	}

@@ -8,6 +8,13 @@
     {
       "type":        "sphere",
       "radius":      0.9,
+      "transformations":
+        [
+          {
+            "type":"translate",
+            "translate":[-0.9,0.035,-4.65]
+          }
+        ],
       "position":    [-0.9, 0.035, -4.65],
       "material": {
         "ambient":      [0.133, 0.333, 0.133],

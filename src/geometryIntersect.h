@@ -4,6 +4,7 @@
 #include <iostream>
 
 #include "schema.h"
+#include "BVH/BVHBoundingBox.h"
 
 typedef glm::vec3 point3;
 typedef glm::vec3 colour3;
@@ -22,16 +23,34 @@ typedef glm::vec3 colour3;
 /// Vector intersection normal, 
 /// Vertex intersection point.
 /// </returns>
-std::tuple<float, Object*, Vector, Vertex> rayIntersectScene(const Vertex& e, const Vector& d, const Scene& scene, float minT);
+std::tuple<float, Object*, Vector, Vertex> rayIntersectObjects(const Vertex& e, const Vector& d, std::vector<Object*> obects, float minT);
+
+struct IntersectionResult {
+    std::string type;
+    IntersectionResult(std::string str): type(str){}
+};
+
+namespace AABBOps {
+    struct AABBIntersectResult : IntersectionResult
+    {
+        Vertex intersection;
+        float t;
+
+        AABBIntersectResult() : IntersectionResult("AABB"), t(-1)
+        {}
+    };
+
+    bool rayIntersects(const Vertex& e, const Vector& d, BVHBoundingBox* bbox, AABBIntersectResult& result, float minT);
+}
 
 namespace cylinderOps {
-    struct CylinderIntersectResult
+    struct CylinderIntersectResult : IntersectionResult
     {
         Vertex intersection;
         Vector normal;
         float t;
 
-        CylinderIntersectResult() : t(-1)
+        CylinderIntersectResult() : IntersectionResult("cylinder"), t(-1)
         {}
     };
 
@@ -39,13 +58,13 @@ namespace cylinderOps {
 }
 
 namespace sphereOps {
-    struct SphereIntersectResult
+    struct SphereIntersectResult : IntersectionResult
     {
         Vertex intersection_near;
         Vector normal_near;
         float t_near;
 
-        SphereIntersectResult() : t_near(-1)
+        SphereIntersectResult() : IntersectionResult("sphere"), t_near(-1)
         {}
     };
 
@@ -53,13 +72,13 @@ namespace sphereOps {
 }
 
 namespace planeOps {
-    struct PlaneIntersectResult
+    struct PlaneIntersectResult : IntersectionResult
     {
         Vertex intersection;
         Vector normal;
         float t;
 
-        PlaneIntersectResult() : t(-1)
+        PlaneIntersectResult() : IntersectionResult("plane"), t(-1)
         {}
     };
 
@@ -69,13 +88,13 @@ namespace planeOps {
 
 
 namespace meshOps {
-    struct MeshRayIntersectResult
+    struct MeshRayIntersectResult : IntersectionResult
     {
         Vertex intersection;
         Vector normal;
         float t;
 
-        MeshRayIntersectResult() : t(-1)
+        MeshRayIntersectResult() : IntersectionResult("mesh"), t(-1)
         {}
     };
 
