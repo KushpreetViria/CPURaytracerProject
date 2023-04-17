@@ -57,17 +57,17 @@ struct Object {
 struct Cylinder : public Object {
     float radius;
     float height;
-    std::vector<glm::mat4> transformations;
+    glm::mat4 transformations;
 
-    Cylinder(Material _material, float _radius, float _height, std::vector<glm::mat4> _transformations) :
+    Cylinder(Material _material, float _radius, float _height, glm::mat4 _transformations) :
         Object("cylinder", _material), radius(_radius), height(_height), transformations(_transformations) {}
 };
 
 struct Sphere : public Object {
   float radius;
-  std::vector<glm::mat4> transformations;
+  glm::mat4 transformations;
 
-  Sphere(Material _material, float _radius, std::vector<glm::mat4> _transformations) :
+  Sphere(Material _material, float _radius, glm::mat4 _transformations) :
     Object("sphere", _material), radius(_radius), transformations(_transformations) {}
 };
 
@@ -79,15 +79,25 @@ struct Plane : public Object {
     Object("plane", _material), position(_position), normal(_normal) {}
 };
 
-struct Triangle {
+struct Mesh;
+
+struct Triangle : public Object{
   Vertex vertices[3];
+  Mesh* parent_mesh;
+  Triangle(Material _material, Vertex _vertices[3], Mesh* _parent_mesh) :
+      Object("triangle", _material), parent_mesh(_parent_mesh) {
+      vertices[0] = _vertices[0];
+      vertices[1] = _vertices[1];
+      vertices[2] = _vertices[2];
+  }
 };
 
 struct Mesh : public Object {
   std::vector<Triangle> triangles;
-  std::vector<glm::mat4> transformations;
+  glm::mat4 transformations;
 
-  Mesh(Material _material, std::vector<Triangle> _triangles, std::vector<glm::mat4> _transformations) :
+  Mesh(Material _material): Object("mesh",_material) {};
+  Mesh(Material _material, std::vector<Triangle> _triangles, glm::mat4 _transformations) :
     Object("mesh", _material), triangles(_triangles), transformations(_transformations) {}
 };
 

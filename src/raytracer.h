@@ -1,6 +1,8 @@
 #pragma once
 #include <glm/glm.hpp>
 
+#include "utils/BS_thread_pool.hpp"
+
 typedef glm::vec3 point3;
 typedef glm::vec3 colour3;
 

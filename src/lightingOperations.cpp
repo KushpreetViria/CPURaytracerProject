@@ -18,17 +18,51 @@ Vector randomVectorBy(const Vector& initial, float small, float big)
 	return newVec;
 }
 
-float lightingOps::calcDistanceIntensity(float dist)
-{
-	return (1.0f / 1.0 + 0.001 * dist + 0.00001 * dist * dist);
+colour3 lightingOps::loopAllSceneLightsDoLighting(const colour3& inital_colour, const Scene& scene, const Material& material, const Vertex& intersection, const Vector& normal, const Vector& E, BVH* bvh) {
+	colour3 colour = colour3(inital_colour);
+	for (auto&& _light : scene.lights) {
+		if (_light->type == "ambient") {
+			AmbientLight* light = (AmbientLight*)(_light);
+
+			colour += lightingOps::calculateAmbient(light, colour, material, intersection, normal, E);
+		}
+		else if (_light->type == "directional") {
+			DirectionalLight* light = (DirectionalLight*)(_light);
+
+			float shadowIntensity = lightingOps::calcDirectionalLightShadowIntensity(intersection, normal, light, bvh);
+			colour += shadowIntensity * (lightingOps::calculateDirectionalPhong(light, colour, material, intersection, normal, E));
+		}
+		else if (_light->type == "point") {
+			PointLight* light = (PointLight*)(_light);
+
+			float distanceIntensity = lightingOps::calcDistanceIntensity(glm::length(light->position - intersection));
+			float shadowIntensity = lightingOps::calcPointLightShadowIntensity(intersection, light, bvh);
+
+			colour += shadowIntensity * distanceIntensity * (lightingOps::calculatePointPhong(light, colour, material, intersection, normal, E));
+		}
+		else if (_light->type == "spot") {
+			SpotLight* light = (SpotLight*)(_light);
+
+			float distanceIntensity = lightingOps::calcDistanceIntensity(glm::length(light->position - intersection));
+			float shadowIntensity = lightingOps::calcSpotLightShadowIntensity(intersection, light, bvh);
+
+			colour += distanceIntensity * shadowIntensity * (lightingOps::calculateSpotPhong(light, colour, material, intersection, normal, E));
+		}
+	}
+	return colour;
 }
 
-float lightingOps::calcDirectionalLightShadowIntensity(const Vertex& intersection, const Vector& normal, DirectionalLight* light, BVH* bvh, int rayCount)
+float lightingOps::calcDistanceIntensity(float dist)
+{
+	return (1.0f / 1.0f + 0.001f * dist + 0.00001f * dist * dist);
+}
+
+float lightingOps::calcDirectionalLightShadowIntensity(const Vertex& intersection, const Vector& normal, DirectionalLight* light, BVH* bvh, bool pick, int rayCount)
 {
 	if (rayCount <= 0) return 1.0f;
 	if (rayCount == 1) {
-		//auto result = rayIntersectObjects(intersection, -light->direction, scene.objects, 0.001);
-		auto result = bvh->intersectBVH(intersection, -light->direction, 0.001);
+		if (pick) std::cout << "Shadow directional intersection: ";
+		auto result = bvh->intersectBVH(intersection, -light->direction, 0.001f, pick);
 		return (std::get<0>(result) >= 0.001f && ((std::get<1>(result) != NULL && std::get<1>(result)->type == "plane") || std::get<1>(result) == NULL))
 			? 1.0f : 0.0f;		
 	}
@@ -36,8 +70,8 @@ float lightingOps::calcDirectionalLightShadowIntensity(const Vertex& intersectio
 	int uninterceptedRays = 0;
 	for (int i = 0; i < rayCount; i++) {
 		Vector randomLightDir = randomVectorBy(Vector(-light->direction),-0.05f,0.05f);
-		//auto result = rayIntersectObjects(intersection, randomLightDir, scene.objects, 0.001);
-		auto result = bvh->intersectBVH(intersection, randomLightDir, 0.001);
+		if (pick) std::cout << "Shadow directional intersection: ";
+		auto result = bvh->intersectBVH(intersection, randomLightDir, 0.001f, pick);
 		if (std::get<0>(result) >= -0.001f && ((std::get<1>(result) != NULL && std::get<1>(result)->type == "plane")
 			|| std::get<1>(result) == NULL))
 			uninterceptedRays++;
@@ -45,13 +79,13 @@ float lightingOps::calcDirectionalLightShadowIntensity(const Vertex& intersectio
 	return (float)uninterceptedRays / (float)rayCount;
 }
 
-float lightingOps::calcPointLightShadowIntensity(const Vertex& intersection, PointLight* light, BVH* bvh, int rayCount)
+float lightingOps::calcPointLightShadowIntensity(const Vertex& intersection, PointLight* light, BVH* bvh, bool pick, int rayCount)
 {
 	if (rayCount <= 0) return 1.0f;
 	if (rayCount == 1) {
 		Vector d = light->position - intersection;
-		//auto result = rayIntersectObjects(intersection, d, scene.objects, 0.001);
-		auto result = bvh->intersectBVH(intersection, d, 0.001);
+		if (pick) std::cout << "Shadow point intersection: ";
+		auto result = bvh->intersectBVH(intersection, d, 0.001f, pick);
 		return (std::get<0>(result) > 1.0f || std::get<0>(result) < -0.001f)
 			? 1.0f : 0.0f;
 	}
@@ -60,21 +94,21 @@ float lightingOps::calcPointLightShadowIntensity(const Vertex& intersection, Poi
 	for (int i = 0; i < rayCount; i++) {
 		Vertex randomLightPoint = randomVectorBy(Vector(light->position), -0.2f, 0.2f);
 		Vector d = randomLightPoint - intersection;
-		//auto result = rayIntersectObjects(intersection, d, scene.objects, 0.001);
-		auto result = bvh->intersectBVH(intersection, d, 0.001);
+		if (pick) std::cout << "Shadow point intersection: ";
+		auto result = bvh->intersectBVH(intersection, d, 0.001f, pick);
 		if (std::get<0>(result) > 1.0f || std::get<0>(result) < -0.001f)
 			uninterceptedRays++;
 	}
 	return (float)uninterceptedRays / (float)rayCount;
 }
 
-float lightingOps::calcSpotLightShadowIntensity(const Vertex& intersection, SpotLight* light, BVH* bvh, int rayCount)
+float lightingOps::calcSpotLightShadowIntensity(const Vertex& intersection, SpotLight* light, BVH* bvh, bool pick, int rayCount)
 {
 	if (rayCount <= 0) return 1.0f;
 	if (rayCount == 1) {
 		Vector d = light->position - intersection;
-		//auto result = rayIntersectObjects(intersection, d, scene.objects, 0.001);
-		auto result = bvh->intersectBVH(intersection, d, 0.001);
+		if (pick) std::cout << "Shadow spot intersection: ";
+		auto result = bvh->intersectBVH(intersection, d, 0.001f, pick);
 		return (std::get<0>(result) > 1.0f || std::get<0>(result) < -0.001f)
 			? 1.0f : 0.0f;
 	}
@@ -83,8 +117,8 @@ float lightingOps::calcSpotLightShadowIntensity(const Vertex& intersection, Spot
 	for (int i = 0; i < rayCount; i++) {
 		Vertex randomLightPoint = randomVectorBy(Vector(light->position), -0.1f, 0.1f);
 		Vector d = randomLightPoint - intersection;
-		//auto result = rayIntersectObjects(intersection, d, scene.objects, 0.001);
-		auto result = bvh->intersectBVH(intersection, d, 0.001);
+		if (pick) std::cout << "Shadow spot intersection: ";
+		auto result = bvh->intersectBVH(intersection, d, 0.001f, pick);
 		if (std::get<0>(result) > 1.0f || std::get<0>(result) < -0.001f)
 			uninterceptedRays++;
 	}
@@ -103,35 +137,35 @@ float lightingOps::calcSpotLightShadowIntensity(const Vertex& intersection, Spot
 }
 
 
-colour3 lightingOps::calculateAmbient(AmbientLight* light, const colour3& color, Material* material, const Vertex& intersection, const Vertex& normal, const Vertex& E)
+colour3 lightingOps::calculateAmbient(AmbientLight* light, const colour3& color, const Material& material, const Vertex& intersection, const Vertex& normal, const Vertex& E)
 {
-    return light->color * material->ambient;
+    return light->color * material.ambient;
 }
 
-colour3 lightingOps::calculateDirectionalPhong(DirectionalLight * light, const colour3& color, Material * material, const Vertex& intersection, const Vertex& normal, const Vertex& E)
+colour3 lightingOps::calculateDirectionalPhong(DirectionalLight * light, const colour3& color, const Material& material, const Vertex& intersection, const Vertex& normal, const Vertex& E)
 {
 	Vector directionToLight = -glm::normalize(light->direction);
-	colour3 diff = material->diffuse * glm::clamp(glm::dot(normal, directionToLight), 0.0f, 1.0f);
+	colour3 diff = material.diffuse * glm::clamp(glm::dot(normal, directionToLight), 0.0f, 1.0f);
 
 	Vector halfway = glm::normalize(directionToLight + E);
-	colour3 spec = material->specular * glm::clamp(glm::pow(glm::min(glm::dot(normal, halfway), 5.0f), material->shininess), 0.0f, 1.0f);
+	colour3 spec = material.specular * glm::clamp(glm::pow(glm::min(glm::dot(normal, halfway), 5.0f), material.shininess), 0.0f, 1.0f);
 
 	return glm::clamp((diff + spec),0.0f,1.0f) * light->color;
 }
 
-colour3 lightingOps::calculatePointPhong(PointLight* light, const colour3& color, Material* material, const Vertex& intersection, const Vertex& normal, const Vertex& E)
+colour3 lightingOps::calculatePointPhong(PointLight* light, const colour3& color, const Material& material, const Vertex& intersection, const Vertex& normal, const Vertex& E)
 {
 	Vector directionToLight = glm::normalize(light->position - intersection);
 
-	colour3 diff = material->diffuse * glm::clamp(glm::dot(normal, directionToLight), 0.0f, 1.0f);
+	colour3 diff = material.diffuse * glm::clamp(glm::dot(normal, directionToLight), 0.0f, 1.0f);
 	
 	Vector halfway = glm::normalize(directionToLight + E);
-	colour3 spec = material->specular * glm::clamp(glm::pow(glm::max(glm::dot(normal, halfway), 0.0f), material->shininess), 0.0f, 1.0f);
+	colour3 spec = material.specular * glm::clamp(glm::pow(glm::max(glm::dot(normal, halfway), 0.0f), material.shininess), 0.0f, 1.0f);
 
 	return glm::clamp((diff + spec),0.0f,1.0f) * light->color;
 }
 
-colour3 lightingOps::calculateSpotPhong(SpotLight* light, const colour3& color, Material* material, const Vertex& intersection, const Vertex& normal, const Vertex& E)
+colour3 lightingOps::calculateSpotPhong(SpotLight* light, const colour3& color, const Material& material, const Vertex& intersection, const Vertex& normal, const Vertex& E)
 {
 	Vector lightDirection = -glm::normalize(light->direction);
 	Vector directionToLight = glm::normalize(light->position - intersection);
@@ -140,10 +174,10 @@ colour3 lightingOps::calculateSpotPhong(SpotLight* light, const colour3& color, 
 	
 	if (angle > light->cutoff) return colour3(0,0,0);
 
-	colour3 diff = material->diffuse * glm::clamp(material->diffuse * glm::dot(normal, lightDirection), 0.0f, 1.0f);
+	colour3 diff = material.diffuse * glm::clamp(material.diffuse * glm::dot(normal, lightDirection), 0.0f, 1.0f);
 
 	Vector halfway = glm::normalize(directionToLight + E);
-	colour3 spec = material->specular * glm::clamp(glm::pow(glm::max(glm::dot(normal, halfway), 0.0f), material->shininess), 0.0f, 1.0f);
+	colour3 spec = material.specular * glm::clamp(glm::pow(glm::max(glm::dot(normal, halfway), 0.0f), material.shininess), 0.0f, 1.0f);
 
 	return glm::clamp((diff + spec),0.0f,1.0f) * light->color;
 }
@@ -167,7 +201,7 @@ colour3 lightingOps::calcRefraction(const Vector& in, const Vector& normal, floa
 		n = -normal;
 	}
 
-	float under_sqrt = 1 - ((glm::pow(theta_i, 2) * (1 - glm::pow(dot_product, 2))) / glm::pow(theta_r, 2));
+	float under_sqrt = 1.0f - ((glm::pow(theta_i, 2.0f) * (1.0f - glm::pow(dot_product, 2.0f))) / glm::pow(theta_r, 2.0f));
 	return  (under_sqrt >= 0)
 			? (theta_i * (in - n * dot_product) / theta_r) - (n * sqrt(under_sqrt))
 			: 2 * glm::dot(n, -in) * n + in;

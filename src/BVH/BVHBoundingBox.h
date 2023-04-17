@@ -30,12 +30,11 @@ public:
 
 	void set_Axis(Vector axis) { this->sortAxis = axis; }
 
-	void toString() {
-		std::cout << "----------------------------------------" << std::endl;
-		std::cout << "Min: (" << x_min << y_min << z_min << ")" << std::endl;
-		std::cout << "Max: (" << x_max << y_max << z_max << ")" << std::endl;
-		std::cout << "Center:" << glm::to_string(get_center()) << std::endl;
-		std::cout << "----------------------------------------" << std::endl;
+	std::string toString() {
+		char buff[1024];
+		snprintf(buff, sizeof(buff), "Min: %f, %f, %f, Max:%f, %f, %f", x_min, y_min, z_min, x_max, y_max, z_max);
+		std::string buffAsStdStr = buff;
+		return buffAsStdStr;
 	}
 
 	static BVHBoundingBox* constructFromObject(std::vector<Object*> objects, Vector BVHSortingAxis);
@@ -54,5 +53,4 @@ private:
 
 	Vector sortAxis;
 	std::vector<Object*> myObjects;
-	static glm::mat4 getTransformations(Object*& obj);
 };

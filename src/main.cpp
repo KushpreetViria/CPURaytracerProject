@@ -5,6 +5,7 @@
 
 #include <iostream>
 
+
 // Create a NULL-terminated string by reading the provided file
 static char*
 readShaderSource(const char* shaderFile)

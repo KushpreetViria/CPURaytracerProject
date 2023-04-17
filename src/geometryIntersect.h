@@ -84,6 +84,7 @@ namespace planeOps {
 
     bool rayIntersects(const Vertex& e, const Vector& d, Plane* plane, PlaneIntersectResult& result, float minT);
     bool rayIntersects(const Vertex& e, const Vector& d, const Vector& n, const Vertex& a, PlaneIntersectResult& result, float minT);
+    bool raytriangleIntersect(const Vertex& e, const Vector& d, Triangle* triangle, PlaneIntersectResult& result, float minT);
 }
 
 

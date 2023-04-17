@@ -4,9 +4,29 @@
 
 BVH::BVH(Scene& scene)
 {
-	auto rootBoundingBox = BVHBoundingBox::constructFromObject(scene.objects, this->axes[0]);
+	std::vector<Object*> copyWithoutPlanes;
+
+	std::copy_if(scene.objects.begin(), scene.objects.end(), std::back_inserter(copyWithoutPlanes), [](Object* o) {return o->type != "plane"; });
+	std::copy_if(scene.objects.begin(), scene.objects.end(), std::back_inserter(this->planes), [](Object* o) {return o->type == "plane"; });
+
+	std::vector<Object*> splitMeshObjects;
+	for (auto&& obj : copyWithoutPlanes) {
+		if (obj->type != "mesh") splitMeshObjects.push_back(obj);
+		else {
+			Mesh* m = (Mesh*)(obj);
+			for (auto& triangle : m->triangles) {
+				splitMeshObjects.push_back(&triangle);
+			}
+		}
+	}
+
+	copyWithoutPlanes.clear(); //free up mem
+
+	totalBVHObjects = splitMeshObjects.size();
+
+	auto rootBoundingBox = BVHBoundingBox::constructFromObject(splitMeshObjects, this->axes[0]);
 	auto root = tree.insertRoot(rootBoundingBox);
-	constructBVHTree(scene.objects, root, 0);
+	constructBVHTree(splitMeshObjects, root, 0);
 }
 
 /// <summary>
@@ -32,8 +52,11 @@ void BVH::constructBVHTree(std::vector<Object*> objects, BVHBinaryTree::Node* pa
 	auto rightBoundingBox = BVHBoundingBox::constructFromObject(rightObjs, this->axes[nextAxisIdx]);
 
 	float overlap = BVHBoundingBox::getBoundingBoxOverlapPercentage(*leftBoundingBox, *rightBoundingBox);
-	if (overlap > 75.0f) {
-		return; // the two children overlapp too much, dont bother spliting
+	if (overlap >= 50.0f) {
+		std::cout << std::endl << "Bad BVH Node. Detected overlap of " << overlap  << "% between bounding boxes." << std::endl;
+	}
+	else {
+		std::cout << ".";
 	}
 
 	auto leftNode = tree.insertLeft(parent, leftBoundingBox);
@@ -45,12 +68,6 @@ void BVH::constructBVHTree(std::vector<Object*> objects, BVHBinaryTree::Node* pa
 
 std::vector<Object*> BVH::sortObjectsAlongAxis(std::vector<Object*> objects, Vector axis)
 {
-	// drop infinite planes froms the array
-	std::vector<Object*> copyWithoutPlanes;
-
-	std::copy_if(objects.begin(), objects.end(), std::back_inserter(copyWithoutPlanes), [](Object* o) {return o->type != "plane"; });
-	std::copy_if(objects.begin(), objects.end(), std::back_inserter(this->planes), [](Object* o) {return o->type == "plane"; });
-
 	auto mySort = [axis](const Object* a, const Object* b)
 	{
 		Vertex aCenter = a->transformPos;
@@ -71,26 +88,29 @@ std::vector<Object*> BVH::sortObjectsAlongAxis(std::vector<Object*> objects, Vec
 		}
 	};
 
-	std::sort(copyWithoutPlanes.begin(), copyWithoutPlanes.end(), mySort);
-	return copyWithoutPlanes;
+	std::sort(objects.begin(), objects.end(), mySort);
+	return objects;
 }
 
-std::tuple<float, Object*, Vector, Vertex> BVH::intersectBVH(const Vertex& e, const Vector& d, float minT) {
+std::tuple<float, Object*, Vector, Vertex> BVH::intersectBVH(const Vertex& e, const Vector& d, float minT, bool pick) {
 	std::tuple<float, Object*, Vector, Vertex> result;
 	std::get<0>(result) = std::numeric_limits<float>::infinity();
-	
+
+	bool res = this->tree.BVHIntersect(e, d, minT, result, pick);
+
 	// check with inifnite planes first
-	for (auto planeObj : this->planes) {
-		Plane* plane = (Plane*)(planeObj);
-		planeOps::PlaneIntersectResult plane_result;
-		if (planeOps::rayIntersects(e, d, plane, plane_result, minT)) {
-			if (plane_result.t > minT && plane_result.t < std::get<0>(result)) {
-				result = { plane_result.t, planeObj, plane_result.normal, plane_result.intersection };
+	if (res == false) {
+		for (auto planeObj : this->planes) {
+			Plane* plane = (Plane*)(planeObj);
+			planeOps::PlaneIntersectResult plane_result;
+			if (planeOps::rayIntersects(e, d, plane, plane_result, minT)) {
+				if (plane_result.t > minT && plane_result.t < std::get<0>(result)) {
+					result = { plane_result.t, planeObj, plane_result.normal, plane_result.intersection };
+				}
 			}
 		}
 	}
 
-	bool res = this->tree.BVHIntersect(e, d, minT, result);
 	return result;
 }
 

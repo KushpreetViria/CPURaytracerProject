@@ -54,7 +54,7 @@ glm::vec3 vector_to_vec3(const std::vector<float>& v) {
 
 void choose_scene(char const* fn) {
 	if (fn == NULL) {
-		fn = "d";
+		fn = "i";
 		std::cout << "Using default input file " << PATH << fn << ".json\n";
 	}
 
@@ -77,6 +77,8 @@ void choose_scene(char const* fn) {
 	fov = scene.camera.field;
 	background_colour = scene.camera.background;
 	bvh = new BVH(scene);
+
+	std::cout << std::endl << "Finished loading (BVH size = " << bvh->tree.getNodeCount() << "). Now tracing..." << std::endl;
 }
 
 bool isReflective(Material material) {
@@ -88,25 +90,19 @@ bool isTransmissive(Material material) {
 }
 
 colour3 recursiveRayTrace(const Vertex& e, const Vector& d, bool& hit, bool pick, int depth) {
-	if (depth > 8) {
+	if (depth > 4) {
 		return background_colour;
 	}
 
-	float minT = depth == 0 ? 1 : 0.001;
-	hit = depth == 0 ? false : depth;
+	float minT = depth == 0 ? 1 : 0.001f;
+	hit = depth == 0 ? false : true;
 
-	auto result = bvh->intersectBVH(e, d, minT);//
+	auto result = bvh->intersectBVH(e, d, minT, pick);
 	//auto result = rayIntersectObjects(e, d, scene.objects, minT);
 
 	Object* object = std::get<1>(result);
-
-	if (object == NULL) {
-		if (depth == 0) hit = false;
-		return background_colour;
-	}
-	else {
-		hit = true;
-	}
+	if (object == NULL) return background_colour;
+	else hit = true;
 
 	colour3 colour = colour3(0, 0, 0);
 	float t = std::get<0>(result);
@@ -115,38 +111,9 @@ colour3 recursiveRayTrace(const Vertex& e, const Vector& d, bool& hit, bool pick
 	Material& material = object->material;
 	Vector E = glm::normalize(e - intersection);
 
-	if (pick) std::cout << "HIT: " << object->type << ", t=" << t << ", n=" << glm::to_string(normal) << std::endl;
+	if (pick && depth ==0) std::cout << "HIT: " << object->type << ", t=" << t << ", n=" << glm::to_string(normal) << std::endl;
 
-	for (auto&& _light : scene.lights) {
-		if (_light->type == "ambient") {
-			AmbientLight* light = (AmbientLight*)(_light);
-
-			colour += lightingOps::calculateAmbient(light, colour, &material, intersection, normal, E);
-		}
-		else if (_light->type == "directional") {
-			DirectionalLight* light = (DirectionalLight*)(_light);
-
-			float shadowIntensity = lightingOps::calcDirectionalLightShadowIntensity(intersection, normal, light, bvh);
-
-			colour += shadowIntensity * (lightingOps::calculateDirectionalPhong(light, colour, &material, intersection, normal, E));
-		}
-		else if (_light->type == "point") {
-			PointLight* light = (PointLight*)(_light);
-
-			float distanceIntensity = lightingOps::calcDistanceIntensity(glm::length(light->position - intersection));
-			float shadowIntensity = lightingOps::calcPointLightShadowIntensity(intersection, light, bvh);
-
-			colour += shadowIntensity * distanceIntensity * (lightingOps::calculatePointPhong(light, colour, &material, intersection, normal, E));
-		}
-		else if (_light->type == "spot") {
-			SpotLight* light = (SpotLight*)(_light);
-
-			float distanceIntensity = lightingOps::calcDistanceIntensity(glm::length(light->position - intersection));
-			float shadowIntensity = lightingOps::calcSpotLightShadowIntensity(intersection, light, bvh);
-
-			colour += distanceIntensity * shadowIntensity * (lightingOps::calculateSpotPhong(light, colour, &material, intersection, normal, E));
-		}
-	}
+	colour += lightingOps::loopAllSceneLightsDoLighting(colour, scene, material, intersection, normal, E, bvh);
 
 	if (isReflective(material)) {
 		Vector reflectedRay = 2 * glm::dot(normal, E) * normal - E;

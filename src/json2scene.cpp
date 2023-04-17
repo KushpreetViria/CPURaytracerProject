@@ -72,7 +72,7 @@ int json_to_scene(json& jscene, Scene& s) {
 				matMultTrans *= (*t);
 			}
 
-			Sphere* sphere = new Sphere(m, radius, transformations);
+			Sphere* sphere = new Sphere(m, radius, matMultTrans);
 			sphere->transformPos = matMultTrans * glm::vec4(0, 0, 0, 1);
 
 			s.objects.push_back(sphere);
@@ -91,7 +91,7 @@ int json_to_scene(json& jscene, Scene& s) {
 				matMultTrans *= (*t);
 			}
 
-			Cylinder* cylinder = new Cylinder(m, radius, height, transformations);
+			Cylinder* cylinder = new Cylinder(m, radius, height, matMultTrans);
 			cylinder->transformPos = matMultTrans * glm::vec4(0, 0, 0,1);
 
 			s.objects.push_back(cylinder);
@@ -119,20 +119,26 @@ int json_to_scene(json& jscene, Scene& s) {
 				matMultTrans *= (*t);
 			}
 
-			Vertex center = Vertex(0, 0, 0);
+			Vertex mesh_center = Vertex(0, 0, 0);
+			Mesh* mesh = new Mesh(m);
+
 			for (json::iterator ti = ts.begin(); ti != ts.end(); ++ti) {
 				json& t = *ti;
 				Vertex v1 = vector_to_vec3(t[0]);
 				Vertex v2 = vector_to_vec3(t[1]);
 				Vertex v3 = vector_to_vec3(t[2]);
-				tris.push_back({ v1, v2, v3 });
+				Vertex arr[3] = { v1,v2,v3 };
+				Triangle tri = Triangle(m, arr, mesh);
+				tri.transformPos = matMultTrans * glm::vec4((v1 + v2 + v3) / 3.0f,1.0f);
+				tris.push_back(tri);
 
-				center += (v1 + v2 + v3) / 3.0f;
+				mesh_center += (v1 + v2 + v3) / 3.0f;
 			}
 
-			center /= (float)ts.size();
-			Mesh* mesh = new Mesh(m, tris, transformations);
-			mesh->transformPos = matMultTrans * glm::vec4(center,1.0f);
+			mesh_center /= (float)ts.size();
+			mesh->triangles = tris;
+			mesh->transformations = matMultTrans;
+			mesh->transformPos = matMultTrans * glm::vec4(mesh_center,1.0f);
 
 			s.objects.push_back(mesh);
 		}

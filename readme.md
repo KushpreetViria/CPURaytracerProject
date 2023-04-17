@@ -1,3 +1,5 @@
+Thread pool library: https://github.com/bshoshany/thread-pool
+
 ### Base features complete:
 - Intersection tests for spheres, planes, and triangles (meshes).
 - Lighting calculated using Phong reflection (Phong specular + Lambertian diffuse).

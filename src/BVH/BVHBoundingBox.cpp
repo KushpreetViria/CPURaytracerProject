@@ -7,20 +7,17 @@ BVHBoundingBox* BVHBoundingBox::constructFromObject(std::vector<Object*> objects
 	float minX = infinity, minY = infinity, minZ = infinity;
 	float maxX = -infinity, maxY = -infinity, maxZ = -infinity;
 	bool exists = false;
+	glm::mat4 transformations;
 
 	for (auto&& obj : objects) {
-		glm::mat4 transformations = getTransformations(obj);
-
 		if (obj->type == "sphere") {
 			exists = true;
 			Sphere* sphere = (Sphere*)(obj);
 			std::vector<Vertex> vertices;
-			vertices.push_back(transformations * glm::vec4((Vertex(sphere->radius, 0, 0)), 1.0f));
-			vertices.push_back(transformations * glm::vec4((Vertex(-sphere->radius, 0, 0)), 1.0f));
-			vertices.push_back(transformations * glm::vec4((Vertex(0, sphere->radius, 0)), 1.0f));
-			vertices.push_back(transformations * glm::vec4((Vertex(0, -sphere->radius, 0)), 1.0f));
-			vertices.push_back(transformations * glm::vec4((Vertex(0, 0, sphere->radius)), 1.0f));
-			vertices.push_back(transformations * glm::vec4((Vertex(0, 0, -sphere->radius)), 1.0f));
+			transformations = sphere->transformations;
+
+			vertices.push_back(transformations * glm::vec4((Vertex(sphere->radius, sphere->radius, sphere->radius)), 1.0f));
+			vertices.push_back(transformations * glm::vec4((Vertex(-sphere->radius, -sphere->radius, -sphere->radius)), 1.0f));
 
 			Vertex minValues = vertices[0];
 			Vertex maxValues = vertices[0];
@@ -43,6 +40,7 @@ BVHBoundingBox* BVHBoundingBox::constructFromObject(std::vector<Object*> objects
 			Cylinder* cylinder = (Cylinder*)(obj);
 			std::vector<Vertex> vertices;
 			float halfHeight = cylinder->height / 2.0f;
+			transformations = cylinder->transformations;
 
 			// source:
 			// https://iquilezles.org/articles/diskbbox/
@@ -73,10 +71,37 @@ BVHBoundingBox* BVHBoundingBox::constructFromObject(std::vector<Object*> objects
 			minX = glm::min(minX, minValues.x); minY = glm::min(minY, minValues.y); minZ = glm::min(minZ, minValues.z);
 			maxX = glm::max(maxX, maxValues.x); maxY = glm::max(maxY, maxValues.y); maxZ = glm::max(maxZ, maxValues.z);
 		}
-		else if (obj->type == "mesh") {
+		else if (obj->type == "triangle") {
+			exists = true;
+			Triangle* triangle = (Triangle*)(obj);
+			transformations = triangle->parent_mesh->transformations;
+
+			Vertex minValues = triangle->vertices[0];
+			Vertex maxValues = triangle->vertices[0];
+
+			std::vector<Vertex> transformedVert;
+			for (auto& vertex : triangle->vertices) {
+				transformedVert.push_back(transformations * glm::vec4(vertex, 1.0f));
+			}
+
+			for (auto& vertex : transformedVert) {
+				minValues.x = glm::min(minValues.x, vertex.x);
+				minValues.y = glm::min(minValues.y, vertex.y);
+				minValues.z = glm::min(minValues.z, vertex.z);
+
+				maxValues.x = glm::max(maxValues.x, vertex.x);
+				maxValues.y = glm::max(maxValues.y, vertex.y);
+				maxValues.z = glm::max(maxValues.z, vertex.z);
+			}
+
+			minX = glm::min(minX, minValues.x); minY = glm::min(minY, minValues.y); minZ = glm::min(minZ, minValues.z);
+			maxX = glm::max(maxX, maxValues.x); maxY = glm::max(maxY, maxValues.y); maxZ = glm::max(maxZ, maxValues.z);
+		}
+		/*else if (obj->type == "mesh") {
 			exists = true;
 			Mesh* mesh = (Mesh*)(obj);
 			std::vector<Vertex> vertices;
+			transformations = mesh->transformations;
 
 			for (auto&& triangle : mesh->triangles) {
 				vertices.push_back(transformations * glm::vec4(triangle.vertices[0], 1));
@@ -98,7 +123,7 @@ BVHBoundingBox* BVHBoundingBox::constructFromObject(std::vector<Object*> objects
 
 			minX = glm::min(minX, minValues.x); minY = glm::min(minY, minValues.y); minZ = glm::min(minZ, minValues.z);
 			maxX = glm::max(maxX, maxValues.x); maxY = glm::max(maxY, maxValues.y); maxZ = glm::max(maxZ, maxValues.z);
-		}
+		}*/
 	}
 
 	if (exists) {
@@ -122,27 +147,3 @@ float BVHBoundingBox::getBoundingBoxOverlapPercentage(const BVHBoundingBox& a, c
 
 BVHBoundingBox::~BVHBoundingBox()
 {}
-
-glm::mat4 BVHBoundingBox::getTransformations(Object*& obj)
-{
-	glm::mat4 transformations(1);
-	std::vector<glm::mat4> transformationMatrices;
-	if (obj->type == "cylinder") {
-		Cylinder* cylinder = (Cylinder*)(obj);
-		transformationMatrices = cylinder->transformations;
-	}
-	else if (obj->type == "sphere") {
-		Sphere* sphere = (Sphere*)(obj);
-		transformationMatrices = sphere->transformations;
-	}
-	else if (obj->type == "mesh") {
-		Mesh* mesh = (Mesh*)(obj);
-		transformationMatrices = mesh->transformations;
-	}
-
-	for (auto t = std::crbegin(transformationMatrices); t != std::crend(transformationMatrices); t++) {
-		transformations *= (*t);
-	}
-
-	return transformations;
-}

@@ -11,6 +11,9 @@
 
 #include <glm/glm.hpp>
 
+BS::thread_pool pool;
+std::chrono::steady_clock::time_point t1;
+bool finished = false;
 const char *WINDOW_TITLE = "Ray Tracing";
 const double FRAME_RATE_MS = 1;
 
@@ -78,6 +81,11 @@ void init(char *fn) {
 	glBindTexture( GL_TEXTURE_1D, textureID );
 	glTexParameteri( GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, GL_NEAREST );
 	glTexParameteri( GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, GL_NEAREST );
+
+	t1 = std::chrono::high_resolution_clock::now();
+
+	std::cout << "-----------------------------" << std::endl;
+	std::cout << "Threadpool size: " << pool.get_thread_count() << std::endl;
 }
 
 //----------------------------------------------------------------------------
@@ -101,11 +109,25 @@ void display( void ) {
 		// only recalculate if this is a new scanline
 		if (drawing_y == int(drawing_y)) {
 
-			for (int x = 0; x < vp_width; x++) {
-				if (!trace(eye, s(x, y), texture[x], false)) {
+			//https://github.com/bshoshany/thread-pool
+
+			auto loop = [y](const int a, const int b)
+			{
+				for (int i = a; i < b; ++i) {
+					bool res = trace(eye, s(i, y), texture[i], false);
+					if (!res) {
+						texture[i] = background_colour;
+					}
+				}
+			};
+			auto futures = pool.parallelize_loop(vp_width, loop);
+
+			/*for (int x = 0; x < vp_width; x++) {
+				bool res = trace(eye, s(x, y), texture[x], false);
+				if (!res) {
 					texture[x] = background_colour;
 				}
-			}
+			}*/
 
 			// to ensure a power-of-two texture, get the next highest power of two
 			// https://graphics.stanford.edu/~seander/bithacks.html#RoundUpPowerOf2
@@ -118,11 +140,13 @@ void display( void ) {
 			v |= v >> 8;
 			v |= v >> 16;
 			v++;
-			
+
 			glTexImage1D( GL_TEXTURE_1D, 0, GL_RGB, v, 0, GL_RGB, GL_FLOAT, texture );
 			vertices[0] = point3(0, y, 0);
 			vertices[1] = point3(v, y, 1);
 			glBufferSubData( GL_ARRAY_BUFFER, 0, 2 * sizeof(point3), vertices);
+
+			futures.wait();
 		}
 
 		glDrawArrays( GL_LINES, 0, 2 );
@@ -133,6 +157,19 @@ void display( void ) {
 		
 		drawing_y += 0.5;
 	}
+	else {
+		if (finished == false) {
+			finished = true;
+			auto t2 = std::chrono::high_resolution_clock::now();
+			auto time = t2 - t1;
+			auto time_sec = std::chrono::duration_cast<std::chrono::seconds>(time);
+			auto time_min = std::chrono::duration_cast<std::chrono::minutes>(time);
+			auto time_hour = std::chrono::duration_cast<std::chrono::hours>(time);
+			std::cout << "Render time: " << time_hour.count() << " hours / " << time_min.count() << " mins / " << time_sec.count() << " secs" << std::endl;
+		}
+	}
+
+
 }
 
 //----------------------------------------------------------------------------
