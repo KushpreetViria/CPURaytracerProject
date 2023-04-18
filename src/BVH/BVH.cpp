@@ -1,6 +1,7 @@
 #include "BVH.h"
 #include <iterator>
 #include <algorithm>
+#include "../Globals.h"
 
 BVH::BVH(Scene& scene)
 {
@@ -98,8 +99,8 @@ std::tuple<float, Object*, Vector, Vertex> BVH::intersectBVH(const Vertex& e, co
 
 	bool res = this->tree.BVHIntersect(e, d, minT, result, pick);
 
-	// check with inifnite planes first
-	if (res == false) {
+	// check with inifnite planes
+	if (Globals::BVH_INCLUDE_PLANES) {
 		for (auto planeObj : this->planes) {
 			Plane* plane = (Plane*)(planeObj);
 			planeOps::PlaneIntersectResult plane_result;

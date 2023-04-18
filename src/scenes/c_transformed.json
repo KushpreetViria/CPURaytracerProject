@@ -11,8 +11,17 @@
       "transformations":
         [
           {
+            "type":"scale",
+            "scale":[0.6,1.4,1]
+          },
+          {
+            "type":"rotation",
+            "axis":[0,0,1],
+            "degrees":90
+          },
+          {
             "type":"translate",
-            "translate":[1.5,1.5,-8.5]
+            "translate":[1.5,2.5,-8.5]
           }          
         ],
       "material": {
@@ -29,8 +38,8 @@
         [
           {
             "type":"translate",
-            "translate":[0,0,-4]
-          }          
+            "translate":[1.8,0,-4]
+          }
         ],
       "material": {
         "ambient":   [0.3, 0.3, 0.3],
@@ -59,6 +68,31 @@
     },
     {
       "type":      "mesh",
+      "transformations":
+        [
+          {
+            "type":"translate",
+            "translate":[0.5,-0.15,1.85]
+          },
+          {
+            "type":"scale",
+            "scale":[1.5,2,1.5]
+          },
+          {
+            "type":"rotation",
+            "axis":[1,0,0],
+            "degrees":-45.0
+          },
+          {
+            "type":"rotation",
+            "axis":[0,0,1],
+            "degrees":-30.0
+          },
+          {
+            "type":"translate",
+            "translate":[-0.5,1.9,-4.95]
+          }
+        ],
       "triangles": [
         [ [-0.5, 1.0, -2.1], [-1.0, -0.7, -2.1], [-0.5, -0.7, -1.6] ],
         [ [-0.5, 1.0, -2.1], [-0.5, -0.7, -1.6], [0.0, -0.7, -2.1] ],

@@ -2,8 +2,12 @@
 // You probably don't need to modify this for the assignment
 // Winter 2021
 
+
 #include "common.h"
 #include "raytracer.h"
+
+#define STB_IMAGE_IMPLEMENTATION
+#include "utils/stb_image.h"
 
 #include <iostream>
 #define M_PI 3.14159265358979323846264338327950288
@@ -76,9 +80,9 @@ void init(char *fn) {
 	glClearColor( 0.7, 0.7, 0.8, 1 );
 
 	// set up a 1D texture for each scanline of output
-	GLuint textureID;
-	glGenTextures( 1, &textureID );
-	glBindTexture( GL_TEXTURE_1D, textureID );
+	GLuint texture;
+	glGenTextures( 1, &texture);
+	glBindTexture( GL_TEXTURE_1D, texture);
 	glTexParameteri( GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, GL_NEAREST );
 	glTexParameteri( GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, GL_NEAREST );
 
@@ -141,14 +145,12 @@ void display( void ) {
 			v |= v >> 16;
 			v++;
 
+			futures.wait();
 			glTexImage1D( GL_TEXTURE_1D, 0, GL_RGB, v, 0, GL_RGB, GL_FLOAT, texture );
 			vertices[0] = point3(0, y, 0);
 			vertices[1] = point3(v, y, 1);
 			glBufferSubData( GL_ARRAY_BUFFER, 0, 2 * sizeof(point3), vertices);
-
-			futures.wait();
 		}
-
 		glDrawArrays( GL_LINES, 0, 2 );
 		
 		glFlush();

@@ -13,7 +13,7 @@
           {
             "type":"translate",
             "translate":[-0.9,0.035,-4.65]
-          }
+          }          
         ],
       "material": {
         "ambient":      [0.133, 0.333, 0.133],
@@ -30,7 +30,7 @@
           {
             "type":"translate",
             "translate":[1.05,0.0,-5.2]
-          }
+          }          
         ],
       "material": {
          "ambient":   [0.075, 0.075, 0.333],
@@ -45,7 +45,7 @@
           {
             "type":"translate",
             "translate":[0.05,1.4,-7.5]
-          }
+          }          
         ],
       "material": {
          "ambient":   [0.1745, 0.01175, 0.01175],

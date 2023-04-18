@@ -13,14 +13,14 @@
           {
             "type":"translate",
             "translate":[-0.9,0.035,-4.65]
-          }          
+          }
         ],
       "material": {
         "ambient":      [0.133, 0.333, 0.133],
         "diffuse":      [0.4, 1, 0.4],
         "specular":     [0.3, 0.3, 0.3],
         "shininess":    75,
-        "reflective":   [0.5, 0.5, 0.5],
+        "reflective":   [0.8, 0.8, 0.8],
         "transmissive": [0.5, 0.5, 0.5],
         "refraction":   1.77
       }
@@ -32,8 +32,8 @@
         [
           {
             "type":"translate",
-            "translate":[1.05,0.0,-5.2]
-          }          
+            "translate":[1.05,0,-5.2]
+          }
         ],
       "material": {
          "ambient":   [0.075, 0.075, 0.333],
@@ -48,7 +48,7 @@
           {
             "type":"translate",
             "translate":[0.05,1.4,-7.5]
-          }          
+          }
         ],
       "material": {
          "ambient":   [0.1745, 0.01175, 0.01175],
@@ -65,7 +65,8 @@
          "ambient":    [0.1, 0.1, 0.1],
          "specular":   [0.5, 0.5, 0.5],
          "shininess":  1,
-         "reflective": [0.2, 0.2, 0.2]
+         "reflective": [0.8, 0.8, 0.8],
+         "refraction": 1.5
       }
     }
   ],

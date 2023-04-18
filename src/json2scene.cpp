@@ -22,6 +22,7 @@ static glm::vec3 vector_to_vec3(const std::vector<float>& v) {
 
 int json_to_scene(json& jscene, Scene& s) {
 	json camera = jscene["camera"];
+
 	if (camera.find("field") != camera.end()) {
 		s.camera.field = camera["field"];
 	}
@@ -127,8 +128,20 @@ int json_to_scene(json& jscene, Scene& s) {
 				Vertex v1 = vector_to_vec3(t[0]);
 				Vertex v2 = vector_to_vec3(t[1]);
 				Vertex v3 = vector_to_vec3(t[2]);
+				
+				// precompute for faster barycenteric coord caclulations
+				//https://ceng2.ktu.edu.tr/~cakir/files/grafikler/Texture_Mapping.pdf
+				Vector e1 = v2 - v1;
+				Vector e2 = v3 - v1;
+				float d00 = glm::dot(e1, e1);
+				float d01 = glm::dot(e1, e2);
+				float d11 = glm::dot(e2, e2);
+				float denom = d00 * d11 - d01 * d01;
+
 				Vertex arr[3] = { v1,v2,v3 };
-				Triangle tri = Triangle(m, arr, mesh);
+				Triangle tri = Triangle(m, arr, mesh, e1, e2, d00, d01, d11, denom);
+
+
 				tri.transformPos = matMultTrans * glm::vec4((v1 + v2 + v3) / 3.0f,1.0f);
 				tris.push_back(tri);
 
@@ -205,6 +218,9 @@ void getTransformations(json object, std::vector<glm::mat4>& transformations) {
 		}
 		else if (t["type"] == "translate") {
 			transformations.push_back(glm::translate(vector_to_vec3(t["translate"])));
+		}
+		else if (t["type"] == "scale") {
+			transformations.push_back(glm::scale(vector_to_vec3(t["scale"])));
 		}
 	}
 }

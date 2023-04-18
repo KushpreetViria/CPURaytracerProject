@@ -83,9 +83,20 @@ struct Mesh;
 
 struct Triangle : public Object{
   Vertex vertices[3];
+
+  //precomputed values for faster barycenteric coord calculations
+  Vector e1;
+  Vector e2;
+  float d00;
+  float d01;
+  float d11;
+  float denom;
+
   Mesh* parent_mesh;
-  Triangle(Material _material, Vertex _vertices[3], Mesh* _parent_mesh) :
-      Object("triangle", _material), parent_mesh(_parent_mesh) {
+  Triangle(Material _material, Vertex _vertices[3], Mesh* _parent_mesh,
+      Vector _e1, Vector _e2, float _d00, float _d01, float _d11 ,float _denom) :
+      Object("triangle", _material), parent_mesh(_parent_mesh),
+      e1(_e1),e2(_e2), d00(_d00), d01(_d01), d11(_d01),denom(_denom){
       vertices[0] = _vertices[0];
       vertices[1] = _vertices[1];
       vertices[2] = _vertices[2];

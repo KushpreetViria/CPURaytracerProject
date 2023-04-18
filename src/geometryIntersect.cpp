@@ -314,8 +314,7 @@ bool cylinderOps::rayIntersects(const Vertex& e, const Vector& d, Cylinder* cyli
 			// the intersection point with the top cap is within the radius of the cylinder
 			result.t = planeresulttop.t;
 			result.intersection = cylinder->transformations * glm::vec4(planeresulttop.intersection, 1);
-			result.normal = glm::normalize(cylinder->transformations * glm::vec4(topcapnormal, 0.0f));  //glm::normalize(cylindertransform * glm::vec4(topcapnormal,0.0f));
-			return true;
+			result.normal = glm::normalize(cylinder->transformations * glm::vec4(topcapnormal, 0.0f));
 		}
 	}
 	else if (planeOps::rayIntersects(transformedrayorigin, transformedraydir, bottomcapnormal, Vertex(0, -cylinder->height / 2.0f, 0), planeresultbot, mint))
@@ -326,7 +325,6 @@ bool cylinderOps::rayIntersects(const Vertex& e, const Vector& d, Cylinder* cyli
 			result.t = planeresultbot.t;
 			result.intersection = cylinder->transformations * glm::vec4(planeresultbot.intersection, 1);
 			result.normal = glm::normalize(cylinder->transformations * glm::vec4(bottomcapnormal, 0.0f));
-			return true;
 		}
 	}
 

@@ -20,6 +20,7 @@
 
 #include "schema.h"
 #include "json2scene.h"
+#include "Globals.h"
 
 const char* PATH = "scenes/";
 
@@ -29,6 +30,22 @@ colour3 background_colour(0, 0, 0);
 json jscene;
 Scene scene;
 BVH* bvh;
+
+namespace Globals {
+	bool AMBIENT = true;
+	bool DIFFUSE = true;
+	bool SPECULAR = true;
+	bool SHADOWS = true;
+	bool REFLECTIONS = true;
+	bool REFRACTION = true;
+	bool TRANSMISSIVE = true;
+	bool SCHLICKS_APPROXIMATION = true;
+	bool BVH = true;
+	bool BVH_INCLUDE_PLANES = true;
+	bool APPROXIMATE_SHADOWS = false;
+	int APPROXIMATE_SHADOWS_RAY_COUNT = 10;
+	int RAYTRACER_DEPTH = 8;
+}
 
 /****************************************************************************/
 
@@ -54,7 +71,7 @@ glm::vec3 vector_to_vec3(const std::vector<float>& v) {
 
 void choose_scene(char const* fn) {
 	if (fn == NULL) {
-		fn = "i";
+		fn = "e";
 		std::cout << "Using default input file " << PATH << fn << ".json\n";
 	}
 
@@ -78,7 +95,8 @@ void choose_scene(char const* fn) {
 	background_colour = scene.camera.background;
 	bvh = new BVH(scene);
 
-	std::cout << std::endl << "Finished loading (BVH size = " << bvh->tree.getNodeCount() << "). Now tracing..." << std::endl;
+	if (!Globals::BVH) std::cout << std::endl << "Note: BVH is disabled!";
+	std::cout << std::endl << "Finished loading (BVH size = " << bvh->tree.getNodeCount() << "). Now tracing..." << std::endl;	
 }
 
 bool isReflective(Material material) {
@@ -97,8 +115,7 @@ colour3 recursiveRayTrace(const Vertex& e, const Vector& d, bool& hit, bool pick
 	float minT = depth == 0 ? 1 : 0.001f;
 	hit = depth == 0 ? false : true;
 
-	auto result = bvh->intersectBVH(e, d, minT, pick);
-	//auto result = rayIntersectObjects(e, d, scene.objects, minT);
+	auto& result = (!Globals::BVH) ? rayIntersectObjects(e, d, scene.objects, minT) : bvh->intersectBVH(e, d, minT, pick);
 
 	Object* object = std::get<1>(result);
 	if (object == NULL) return background_colour;
@@ -115,14 +132,26 @@ colour3 recursiveRayTrace(const Vertex& e, const Vector& d, bool& hit, bool pick
 
 	colour += lightingOps::loopAllSceneLightsDoLighting(colour, scene, material, intersection, normal, E, bvh);
 
-	if (isReflective(material)) {
+	// a refraction value is assumed to exist if SCHLICKS_APPROXIMATION is toggled
+	float schlicks = (isReflective(material) || isTransmissive(material)) ? lightingOps::calcSchlicksApprox(d, normal, material) : 1.0f;
+
+	if (Globals::REFLECTIONS && isReflective(material)) {
 		Vector reflectedRay = 2 * glm::dot(normal, E) * normal - E;
-		colour += (recursiveRayTrace(intersection, reflectedRay, hit, pick, depth + 1) * material.reflective);
+
+		colour3 reflectColor = recursiveRayTrace(intersection, reflectedRay, hit, pick, depth + 1);
+
+		if (Globals::SCHLICKS_APPROXIMATION) {
+			colour += reflectColor * (material.reflective * schlicks);
+		}
+		else {
+			colour += reflectColor * material.reflective;
+		}
 	}
 
-	if (isTransmissive(material)) {
-		Vector reflectedRay = material.refraction > 0 ? lightingOps::calcRefraction(d, normal, material.refraction, reflectedRay) : d;
-		colour = (colour * (1.0f - material.transmissive)) + recursiveRayTrace(intersection, reflectedRay, hit, pick, depth + 1) * material.transmissive;
+	if (Globals::TRANSMISSIVE && isTransmissive(material)) {
+		Vector reflectedRay = (Globals::REFRACTION && material.refraction > 0) ? lightingOps::calcRefraction(d, normal, material.refraction) : d;
+		Vector intensity = Globals::SCHLICKS_APPROXIMATION ? material.transmissive * (1.0f - schlicks) : material.transmissive;
+		colour = (colour * (1.0f - intensity)) + recursiveRayTrace(intersection, reflectedRay, hit, pick, depth + 1) * intensity;
 	}
 
 	colour = glm::clamp(colour, 0.0f, 1.0f);
@@ -132,11 +161,6 @@ colour3 recursiveRayTrace(const Vertex& e, const Vector& d, bool& hit, bool pick
 bool trace(const Vertex& e, const Vertex& s, colour3& colour, bool pick) {
 	Vector d = s - e;
 	bool hit = false;
-
-	if (pick) {
-		//bvh->intersectBVH(e, d, 0.001);
-	}
-
 	colour = recursiveRayTrace(e, d, hit, pick, 0);
 	return hit;
 }
