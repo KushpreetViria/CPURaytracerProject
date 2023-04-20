@@ -41,7 +41,7 @@ namespace Globals {
 	bool TRANSMISSIVE = true;
 	bool SCHLICKS_APPROXIMATION = false;
 	bool ANTI_ALIASING = false;
-	bool ANTI_ALIAS_INFINITE_PLANES = false; //not very noticeble + slow
+	bool ANTI_ALIAS_INFINITE_PLANES = true;
 	bool BVH = true;
 	bool BVH_INCLUDE_PLANES = true;
 	bool APPROXIMATE_SHADOWS = false;
@@ -73,7 +73,7 @@ glm::vec3 vector_to_vec3(const std::vector<float>& v) {
 
 void choose_scene(char const* fn) {
 	if (fn == NULL) {
-		fn = "i";
+		fn = "g";
 		std::cout << "Using default input file " << PATH << fn << ".json\n";
 	}
 

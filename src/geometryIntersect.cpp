@@ -264,7 +264,8 @@ bool meshOps::rayIntersects(const Vertex& e, const Vector& d, Mesh* mesh, meshOp
 
 // ***************************************************************************************************************** //
 // Cylinder operations
-// https://www.realtimerendering.com/intersections.html
+// Infinite Cylinder intersection source:
+// https://www.cl.cam.ac.uk/teaching/1999/AGraphHCI/SMAG/node2.html#eqn:rectray
 // ***************************************************************************************************************** //
 
 bool cylinderOps::rayIntersects(const Vertex& e, const Vector& d, Cylinder* cylinder, CylinderIntersectResult& result, float mint) 
@@ -351,6 +352,11 @@ bool cylinderOps::rayIntersects(const Vertex& e, const Vector& d, Cylinder* cyli
 	return true;
 }
 
+
+// ***************************************************************************************************************** //
+// AABB operations
+// AA Box intersection source:
+// ***************************************************************************************************************** //
 //https://www.scratchapixel.com/lessons/3d-basic-rendering/minimal-ray-tracer-rendering-simple-shapes/ray-box-intersection.html
 bool AABBOps::rayIntersects(const Vertex& e, const Vector& d, BVHBoundingBox* bbox, AABBIntersectResult& result, float minT)
 {

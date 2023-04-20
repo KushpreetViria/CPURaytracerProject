@@ -42,8 +42,8 @@ BVHBoundingBox* BVHBoundingBox::constructFromObject(std::vector<Object*> objects
 			float halfHeight = cylinder->height / 2.0f;
 			transformations = cylinder->transformations;
 
-			// source:
-			// https://iquilezles.org/articles/diskbbox/
+			// Tight Bounding volume for a transformed cylinder:
+			// https://www.iquilezles.org/articles/diskbbox/
 
 			Vertex pa = transformations * glm::vec4(0, halfHeight, 0,1);
 			Vertex pb = transformations * glm::vec4(0, -halfHeight, 0,1);
@@ -134,6 +134,9 @@ BVHBoundingBox* BVHBoundingBox::constructFromObject(std::vector<Object*> objects
 	}
 }
 
+
+// Bounding box overlapped area source:
+// https://stackoverflow.com/questions/25349178/calculating-percentage-of-bounding-box-overlap-for-image-detector-evaluation
 float BVHBoundingBox::getBoundingBoxOverlapPercentage(const BVHBoundingBox& a, const BVHBoundingBox& b) {
 	float overlapX = std::max(0.0f, std::min(a.get_x_max(), b.get_x_max()) - std::max(a.get_x_min(), b.get_x_min()));
 	float overlapY = std::max(0.0f, std::min(a.get_y_max(), b.get_y_max()) - std::max(a.get_y_min(), b.get_y_min()));

@@ -115,6 +115,7 @@ void display( void ) {
 		// only recalculate if this is a new scanline
 		if (drawing_y == int(drawing_y)) {
 
+			// Thread poool library to parallelize Trace:
 			//https://github.com/bshoshany/thread-pool
 
 			auto loop = [y](const int a, const int b)
