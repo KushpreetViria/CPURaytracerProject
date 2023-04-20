@@ -59,7 +59,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;GLEW_STATIC;FREEGLUT_STATIC;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(SolutionDir)\glm;$(SolutionDir)\glew\include;$(SolutionDir)\freeglut\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\kviri\Desktop\Graphics 2\Asssignments\Assignment5-project\dependancies;$(SolutionDir)\glm;$(SolutionDir)\glew\include;$(SolutionDir)\freeglut\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <OpenMPSupport>true</OpenMPSupport>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
@@ -101,7 +101,6 @@
     <ClInclude Include="..\src\geometryIntersect.h" />
     <ClInclude Include="..\src\raytracer.h" />
     <ClInclude Include="..\src\schema.h" />
-    <ClInclude Include="..\src\utils\stb_image.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
   </ItemGroup>

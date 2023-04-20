@@ -296,66 +296,59 @@ bool cylinderOps::rayIntersects(const Vertex& e, const Vector& d, Cylinder* cyli
 		t2 = maxt;
 	}
 
-	// check for intersection with the top and bottom caps of the cylinder
-	bool intersectstopcap = false;
-	bool intersectsbottomcap = false;
-
-	Vector topcapnormal = Vector(0.0f, 1.0f, 0.0f);
-	Vector bottomcapnormal = Vector(0.0f, -1.0f, 0.0f);
-
-	planeOps::PlaneIntersectResult planeresulttop;
-	planeOps::PlaneIntersectResult planeresultbot;
-
-	// check if the intersection points with the caps are within the radius of the cylinder
-	if (planeOps::rayIntersects(transformedrayorigin, transformedraydir, topcapnormal, Vertex(0, cylinder->height / 2.0f, 0), planeresulttop, mint))
-	{
-		if (glm::length(glm::vec2(planeresulttop.intersection.x, planeresulttop.intersection.z)) <= cylinder->radius)
-		{
-			// the intersection point with the top cap is within the radius of the cylinder
-			result.t = planeresulttop.t;
-			result.intersection = cylinder->transformations * glm::vec4(planeresulttop.intersection, 1);
-			result.normal = glm::normalize(cylinder->transformations * glm::vec4(topcapnormal, 0.0f));
-		}
-	}
-	else if (planeOps::rayIntersects(transformedrayorigin, transformedraydir, bottomcapnormal, Vertex(0, -cylinder->height / 2.0f, 0), planeresultbot, mint))
-	{
-		if (glm::length(glm::vec2(planeresultbot.intersection.x, planeresultbot.intersection.z)) <= cylinder->radius)
-		{
-			// the intersection point with the bottom cap is within the radius of the cylinder
-			result.t = planeresultbot.t;
-			result.intersection = cylinder->transformations * glm::vec4(planeresultbot.intersection, 1);
-			result.normal = glm::normalize(cylinder->transformations * glm::vec4(bottomcapnormal, 0.0f));
-		}
-	}
+	result.t = std::numeric_limits<float>::infinity();
 
 	// check if the intersection points are within the height of the cylinder
 	float miny = -cylinder->height / 2.0f; float maxy = cylinder->height / 2.0f;
 	Vertex p1 = transformedrayorigin + t1 * transformedraydir;
 
-	if (p1.y < miny || p1.y > maxy)
+	if (p1.y <= miny || p1.y >= maxy)
 	{
 		// the first body intersection point is outside the height of the cylinder, check the second intersection point
 		Vertex p2 = transformedrayorigin + t2 * transformedraydir;
-		if (p2.y < miny || p2.y > maxy)
+		if (p2.y <= miny || p2.y >= maxy)
 		{
 			// both body intersection points are outside the height of the cylinder
 			return false;
 		}
 		else {
 			result.t = t2;
-			result.intersection = cylinder->transformations * glm::vec4(p2,1);
+			result.intersection = cylinder->transformations * glm::vec4(p2, 1);
 			result.normal = glm::normalize(cylinder->transformations * glm::vec4(p2.x, 0.0f, p2.z, 0.0f));
-			return true;
 		}
 	}
 	else {
 		result.t = t1;
-		result.intersection = cylinder->transformations * glm::vec4(p1,1);
+		result.intersection = cylinder->transformations * glm::vec4(p1, 1);
 		result.normal = glm::normalize(cylinder->transformations * glm::vec4(p1.x, 0.0f, p1.z, 0.0f));
-		return true;
 	}
 
-	return false;
+	Vector topcapnormal = Vector(0.0f, 1.0f, 0.0f), bottomcapnormal = Vector(0.0f, -1.0f, 0.0f);
+	planeOps::PlaneIntersectResult planeresulttop, planeresultbot;
+
+	// check if the intersection points with the caps are within the radius of the cylinder
+	if (planeOps::rayIntersects(transformedrayorigin, transformedraydir, topcapnormal, Vertex(0, cylinder->height / 2.0f, 0), planeresulttop, mint))
+	{
+		if (glm::length(glm::vec2(planeresulttop.intersection.x, planeresulttop.intersection.z)) <= cylinder->radius && planeresulttop.t < result.t)
+		{
+			// the intersection point with the top cap is within the radius of the cylinder
+			result.t = planeresulttop.t;
+			result.intersection = cylinder->transformations * glm::vec4(planeresulttop.intersection, 1);
+			result.normal = cylinder->transformations * glm::vec4(topcapnormal, 0.0f);
+		}
+	}
+	if (planeOps::rayIntersects(transformedrayorigin, transformedraydir, bottomcapnormal, Vertex(0, -cylinder->height / 2.0f, 0), planeresultbot, mint))
+	{
+		if (glm::length(glm::vec2(planeresultbot.intersection.x, planeresultbot.intersection.z)) <= cylinder->radius && planeresultbot.t < result.t)
+		{
+			// the intersection point with the bottom cap is within the radius of the cylinder
+			result.t = planeresultbot.t;
+			result.intersection = cylinder->transformations * glm::vec4(planeresultbot.intersection, 1);
+			result.normal = cylinder->transformations * glm::vec4(bottomcapnormal, 0.0f);
+		}
+	}
+
+	return true;
 }
 
 //https://www.scratchapixel.com/lessons/3d-basic-rendering/minimal-ray-tracer-rendering-simple-shapes/ray-box-intersection.html

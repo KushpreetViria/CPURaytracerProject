@@ -13,7 +13,6 @@
 #  include <GL/freeglut.h>
 #  include <GL/freeglut_ext.h>
 #endif  // __APPLE__
-#include "utils/BS_thread_pool.hpp"
 
 // Define a helpful macro for handling offsets into buffer objects
 #define BUFFER_OFFSET( offset )   ((GLvoid*) (offset))

@@ -5,9 +5,8 @@
 
 #include "common.h"
 #include "raytracer.h"
-
-#define STB_IMAGE_IMPLEMENTATION
-#include "utils/stb_image.h"
+#include "Globals.h"
+#include "BS_thread_pool.hpp"
 
 #include <iostream>
 #define M_PI 3.14159265358979323846264338327950288
@@ -29,6 +28,9 @@ float drawing_y = 0;
 
 point3 eye;
 float d = 1;
+
+float pixel_x_offsets = 0;
+float pixel_y_offsets = 0;
 
 //----------------------------------------------------------------------------
 
@@ -118,20 +120,33 @@ void display( void ) {
 			auto loop = [y](const int a, const int b)
 			{
 				for (int i = a; i < b; ++i) {
-					bool res = trace(eye, s(i, y), texture[i], false);
+					colour3 result;
+					Object* hitObject = nullptr;
+					Vertex pixel = s(i, y);
+
+					bool res = trace(eye, pixel , result, hitObject, false);
 					if (!res) {
 						texture[i] = background_colour;
+					}
+					else if (Globals::ANTI_ALIASING && ((Globals::ANTI_ALIAS_INFINITE_PLANES &&
+						hitObject->type == "plane") || 
+						(hitObject->type != "plane")) ) 
+					{
+						colour3 c1, c2, c3, c4;
+						trace(eye, pixel + Vertex(pixel_x_offsets,0,0), c1, hitObject, false);
+						trace(eye, pixel + Vertex(-pixel_x_offsets, 0, 0), c2, hitObject, false);
+						trace(eye, pixel + Vertex(0, pixel_y_offsets, 0), c3, hitObject, false);
+						trace(eye, pixel + Vertex(0, -pixel_y_offsets, 0), c4, hitObject, false);
+
+						texture[i] = (result + c1 + c2 + c3 + c4) / 5.0f;
+					}
+					else 
+					{
+						texture[i] = result;
 					}
 				}
 			};
 			auto futures = pool.parallelize_loop(vp_width, loop);
-
-			/*for (int x = 0; x < vp_width; x++) {
-				bool res = trace(eye, s(x, y), texture[x], false);
-				if (!res) {
-					texture[x] = background_colour;
-				}
-			}*/
 
 			// to ensure a power-of-two texture, get the next highest power of two
 			// https://graphics.stanford.edu/~seander/bithacks.html#RoundUpPowerOf2
@@ -198,7 +213,8 @@ void mouse( int button, int state, int x, int y ) {
 			colour3 c;
 			point3 uvw = s(x, y);
 			std::cout << std::endl;
-			if (trace(eye, uvw, c, true)) {
+			Object* obj;
+			if (trace(eye, uvw, c, obj, true)) {
 				std::cout << "HIT @ ( " << uvw.x << "," << uvw.y << "," << uvw.z << " )\n";
 				std::cout << "      colour = ( " << c.r << "," << c.g << "," << c.b << " )\n";
 			} else {
@@ -226,4 +242,9 @@ void reshape( int width, int height ) {
 	vp_height = height;
 	glUniform2f( Window, width, height );
 	drawing_y = 0;
+
+	pixel_x_offsets = s(1,0).x - s(0,0).x;
+	pixel_y_offsets = s(0,1).y - s(0,0).y;
+	pixel_x_offsets += pixel_x_offsets * 0.25f;
+	pixel_y_offsets += pixel_y_offsets * 0.25f;
 }
